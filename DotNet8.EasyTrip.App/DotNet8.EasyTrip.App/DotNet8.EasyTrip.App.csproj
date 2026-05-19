@@ -11,12 +11,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="MudBlazor" Version="9.4.0" />
     <ProjectReference Include="..\DotNet8.EasyTrip.App.Client\DotNet8.EasyTrip.App.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.26" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DotNet8.EasyTripBackendApi.Models\DotNet8.EasyTripBackendApi.Models.csproj" />
+    <ProjectReference Include="..\..\DotNet8.EasyTripBackendApi.Shared\DotNet8.EasyTripBackendApi.Shared.csproj" />
   </ItemGroup>
 
 </Project>

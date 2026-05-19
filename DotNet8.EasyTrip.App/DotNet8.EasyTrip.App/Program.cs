@@ -1,5 +1,6 @@
 using DotNet8.EasyTrip.App.Client.Pages;
 using DotNet8.EasyTrip.App.Components;
+using MudBlazor.Services;
 
 namespace DotNet8.EasyTrip.App
 {
@@ -12,6 +13,8 @@ namespace DotNet8.EasyTrip.App
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
+
+            builder.Services.AddMudServices();
 
             var app = builder.Build();
 

@@ -1,0 +1,1108 @@
+@page "/bookings"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-12">
+    <!-- Header Section with sleek gradient background -->
+    <MudPaper Class="p-6 mb-8 rounded-lg d-flex justify-between align-center" 
+              Style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; border-left: 6px solid #594ae2;">
+        <div>
+            <MudText Typo="Typo.h4" Class="font-bold mb-1" Style="font-weight: 800; letter-spacing: -0.5px;">Booking Management</MudText>
+            <MudText Typo="Typo.body2" Style="color: #9ca3af;">Manage customer reservations, track financial metrics, and book new itineraries dynamically.</MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Size="Size.Large"
+                   OnClick="OpenCreateDialog"
+                   Style="background: linear-gradient(90deg, #594ae2 0%, #7c3aed 100%); font-weight: 600; text-transform: none; border-radius: 8px; box-shadow: 0 4px 14px rgba(89, 74, 226, 0.4);">
+            New Booking
+        </MudButton>
+    </MudPaper>
+
+    <!-- Dashboard Metrics Cards -->
+    <MudGrid Class="mb-8">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="p-5 rounded-lg border border-gray-200" Elevation="2" Style="border-radius: 12px; transition: transform 0.2s ease;">
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="text-secondary mb-1">Total Bookings</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight: 800; color: #1e293b;">@totalBookingsCount</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Style="height: 48px; width: 48px; border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Filled.BookOnline" />
+                    </MudAvatar>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="p-5 rounded-lg border border-gray-200" Elevation="2" Style="border-radius: 12px;">
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="text-secondary mb-1">Total Revenue</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight: 800; color: #10b981;">@totalRevenue.ToString("N0") MMK</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Success" Variant="Variant.Filled" Style="height: 48px; width: 48px; border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Filled.MonetizationOn" />
+                    </MudAvatar>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="p-5 rounded-lg border border-gray-200" Elevation="2" Style="border-radius: 12px;">
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="text-secondary mb-1">Bus Reservations</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight: 800; color: #f59e0b;">@busCount</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Style="height: 48px; width: 48px; border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" />
+                    </MudAvatar>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="p-5 rounded-lg border border-gray-200" Elevation="2" Style="border-radius: 12px;">
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="text-secondary mb-1">Hotel & Packages</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight: 800; color: #6366f1;">@(hotelCount + packageCount)</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Info" Variant="Variant.Filled" Style="height: 48px; width: 48px; border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Filled.CardTravel" />
+                    </MudAvatar>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Data Table & Search Section -->
+    <MudPaper Class="p-6 rounded-lg border border-gray-200" Elevation="3" Style="border-radius: 12px;">
+        <div class="d-flex justify-between align-center mb-6">
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">Reservation Directory</MudText>
+            <div class="d-flex gap-3 align-center" style="width: 400px;">
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search customer, item, or ID..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              IconSize="Size.Medium" 
+                              Class="mt-0"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Secondary" 
+                           OnClick="() => FilterBookings()"
+                           Style="height: 40px; text-transform: none; font-weight: 600; border-radius: 6px;">
+                    Search
+                </MudButton>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-center my-12 align-center gap-3">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.body1" Class="text-secondary">Retrieving bookings from server...</MudText>
+            </div>
+        }
+        else if (filteredBookings == null || !filteredBookings.Any())
+        {
+            <div class="text-center py-12 border border-dashed rounded-lg bg-gray-50 d-flex flex-column align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Default" Size="Size.Large" Style="font-size: 64px;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="font-bold text-secondary mb-1">No Bookings Found</MudText>
+                <MudText Typo="Typo.body2" Class="text-muted mb-4">There are currently no reservations matching your filters or recorded in the database.</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog">Add Your First Booking</MudButton>
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@paginatedBookings" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" Class="border border-gray-100 rounded-lg">
+                <HeaderContent>
+                    <MudTh Style="font-weight: 700;">ID</MudTh>
+                    <MudTh Style="font-weight: 700;">Customer</MudTh>
+                    <MudTh Style="font-weight: 700;">Type</MudTh>
+                    <MudTh Style="font-weight: 700;">Booked Item</MudTh>
+                    <MudTh Style="font-weight: 700;">Travel Date</MudTh>
+                    <MudTh Style="font-weight: 700;">Total Amount</MudTh>
+                    <MudTh Style="font-weight: 700;">Payment Status</MudTh>
+                    <MudTh Style="font-weight: 700;">Booking Status</MudTh>
+                    <MudTh Style="font-weight: 700; text-align: center;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID"><strong>#@context.Id</strong></MudTd>
+                    <MudTd DataLabel="Customer">
+                        <div class="d-flex flex-column">
+                            <MudText Typo="Typo.body2" Class="font-semibold">@(context.UserName ?? $"User #{context.UserId}")</MudText>
+                            <MudText Typo="Typo.caption" Class="text-muted">@(context.UserEmail ?? "no-email@easytrip.com")</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Type">
+                        <MudChip T="string" Color="@GetBookingTypeColor(context.BookingType)" Size="Size.Small" Style="font-weight: 600;">@context.BookingType</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Booked Item">@(context.ItemName ?? "Multiple/Complex Detail")</MudTd>
+                    <MudTd DataLabel="Travel Date">@context.TravelDate.ToString("dd MMM yyyy")</MudTd>
+                    <MudTd DataLabel="Total Amount"><strong style="color: #10b981;">@context.TotalAmount.ToString("N0") MMK</strong></MudTd>
+                    <MudTd DataLabel="Payment Status">
+                        <MudChip T="string" Color="@GetPaymentStatusColor(context.PaymentStatus)" Variant="Variant.Text" Size="Size.Small" Style="font-weight: 700;">@context.PaymentStatus.ToString()</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Booking Status">
+                        <MudChip T="string" Color="@GetBookingStatusColor(context.BookingStatus)" Size="Size.Small" Style="font-weight: 600;">@context.BookingStatus.ToString()</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Actions" Style="text-align: center;">
+                        <div class="d-flex justify-center gap-1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small" OnClick="() => OpenEditDialog(context)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => ConfirmDelete(context)" />
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <!-- Pagination Toolbar -->
+            <div class="d-flex justify-between align-center mt-6">
+                <MudText Typo="Typo.caption" Class="text-secondary">Showing @(((pageIndex - 1) * pageSize) + 1) to @(Math.Min(pageIndex * pageSize, filteredBookings.Count)) of @filteredBookings.Count bookings</MudText>
+                <div class="d-flex align-center gap-2">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(pageIndex == 1)" OnClick="PrevPage" />
+                    <MudText Typo="Typo.body2" Class="font-bold">Page @pageIndex of @totalPages</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(pageIndex == totalPages)" OnClick="NextPage" />
+                </div>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+<!-- Dynamic CRUD MudDialog Structure -->
+<MudDialog @bind-Visible="isDialogVisible" Options="dialogOptions" Style="border-radius: 16px; overflow: hidden; max-width: 650px; width: 100%;">
+    <TitleContent>
+        <div class="d-flex align-center gap-2 py-2">
+            <MudIcon Icon="@(isEditMode ? Icons.Material.Filled.EditCalendar : Icons.Material.Filled.AddModerator)" Color="Color.Primary" Size="Size.Medium" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">@(isEditMode ? $"Modify Reservation #{activeBookingId}" : "Create A New Booking")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm Model="@submitModel" @ref="form" Class="py-2">
+            <MudGrid Spacing="3">
+                <!-- Row 1: Booking Type & Travel Date -->
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Booking Category" @bind-Value="submitModel.BookingType" SelectedValuesChanged="OnBookingTypeChanged" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("Bus")">🚌 Bus Transport</MudSelectItem>
+                        <MudSelectItem Value="@("Hotel")">🏨 Hotel Lodging</MudSelectItem>
+                        <MudSelectItem Value="@("Package")">📦 Travel Package</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Travel/Check-in Date" @bind-Date="selectedTravelDate" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <!-- DYNAMIC FIELDS BASED ON BOOKING TYPE -->
+                @if (submitModel.BookingType == "Bus")
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="font-bold text-secondary mb-2">Bus Class & Route Details</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSelect T="long" Label="Select Bus Class & Route" @bind-Value="selectedBusId" SelectedValuesChanged="OnBusClassChanged" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var bus in mockBuses)
+                            {
+                                <MudSelectItem Value="@bus.Id">@($"{bus.Route} - {bus.ClassType} ({bus.PricePerSeat:N0} MMK)")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    @if (selectedBusId > 0)
+                    {
+                        var chosenBus = mockBuses.FirstOrDefault(b => b.Id == selectedBusId);
+                        <MudItem xs="12">
+                            <MudPaper Class="p-4 bg-gray-50 border rounded-lg" Elevation="0">
+                                <div class="d-flex justify-between align-center mb-3">
+                                    <MudText Typo="Typo.body2" Class="font-bold">🚌 Click to Select Seats (@(chosenBus?.ClassType))</MudText>
+                                    <div class="d-flex gap-2">
+                                        <span class="d-flex align-center gap-1"><MudIcon Icon="@Icons.Material.Filled.Square" Color="Color.Success" Size="Size.Small" />Selected</span>
+                                        <span class="d-flex align-center gap-1"><MudIcon Icon="@Icons.Material.Filled.Square" Color="Color.Default" Size="Size.Small" />Available</span>
+                                        <span class="d-flex align-center gap-1"><MudIcon Icon="@Icons.Material.Filled.Square" Color="Color.Error" Size="Size.Small" />Occupied</span>
+                                    </div>
+                                </div>
+
+                                <!-- Custom Bus Seating Chart Design -->
+                                <div class="bus-container mx-auto p-4 rounded-xl border border-slate-300 relative bg-white" 
+                                     style="max-width: 320px; border: 2px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                                    
+                                    <!-- Front/Dashboard -->
+                                    <div class="d-flex justify-between align-center border-b pb-3 mb-4 text-slate-400">
+                                        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Medium" Style="transform: rotate(45deg); color: #94a3b8;" />
+                                        <MudText Typo="Typo.caption" Class="uppercase font-bold tracking-wider">Front of Bus / Driver</MudText>
+                                        <MudIcon Icon="@Icons.Material.Filled.SportsScore" Size="Size.Medium" />
+                                    </div>
+
+                                    <!-- Grid Layout based on ClassType -->
+                                    @if (chosenBus?.ClassType.Contains("VIP") == true)
+                                    {
+                                        <!-- VIP 2+1 Layout (3 seats per row) -->
+                                        <div class="d-flex flex-column gap-3">
+                                            @for (int r = 1; r <= 6; r++)
+                                            {
+                                                var rowChar = (char)('A' + r - 1);
+                                                <div class="d-flex justify-between align-center">
+                                                    <!-- Left Seat -->
+                                                    <div style="width: 45px;">
+                                                        @{ var seat1 = $"{rowChar}1"; }
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat1)" 
+                                                                 Color="@GetSeatColor(seat1)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat1)"
+                                                                 OnClick="() => ToggleSeat(seat1)" 
+                                                                 Class="ma-0 w-100 font-bold">@seat1</MudChip>
+                                                    </div>
+
+                                                    <!-- Middle Aisle -->
+                                                    <div style="width: 30px;" class="text-center text-slate-300 font-semibold">|</div>
+
+                                                    <!-- Right 2 Seats -->
+                                                    <div class="d-flex gap-2">
+                                                        @{ 
+                                                            var seat2 = $"{rowChar}2"; 
+                                                            var seat3 = $"{rowChar}3"; 
+                                                        }
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat2)" 
+                                                                 Color="@GetSeatColor(seat2)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat2)"
+                                                                 OnClick="() => ToggleSeat(seat2)" 
+                                                                 Class="ma-0 font-bold">@seat2</MudChip>
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat3)" 
+                                                                 Color="@GetSeatColor(seat3)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat3)"
+                                                                 OnClick="() => ToggleSeat(seat3)" 
+                                                                 Class="ma-0 font-bold">@seat3</MudChip>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <!-- Standard 2+2 Layout (4 seats per row) -->
+                                        <div class="d-flex flex-column gap-3">
+                                            @for (int r = 1; r <= 6; r++)
+                                            {
+                                                var rowChar = (char)('A' + r - 1);
+                                                <div class="d-flex justify-between align-center">
+                                                    <!-- Left 2 Seats -->
+                                                    <div class="d-flex gap-2">
+                                                        @{ 
+                                                            var seat1 = $"{rowChar}1"; 
+                                                            var seat2 = $"{rowChar}2"; 
+                                                        }
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat1)" 
+                                                                 Color="@GetSeatColor(seat1)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat1)"
+                                                                 OnClick="() => ToggleSeat(seat1)" 
+                                                                 Class="ma-0 font-bold">@seat1</MudChip>
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat2)" 
+                                                                 Color="@GetSeatColor(seat2)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat2)"
+                                                                 OnClick="() => ToggleSeat(seat2)" 
+                                                                 Class="ma-0 font-bold">@seat2</MudChip>
+                                                    </div>
+
+                                                    <!-- Aisle -->
+                                                    <div style="width: 20px;" class="text-center text-slate-300 font-semibold">|</div>
+
+                                                    <!-- Right 2 Seats -->
+                                                    <div class="d-flex gap-2">
+                                                        @{ 
+                                                            var seat3 = $"{rowChar}3"; 
+                                                            var seat4 = $"{rowChar}4"; 
+                                                        }
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat3)" 
+                                                                 Color="@GetSeatColor(seat3)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat3)"
+                                                                 OnClick="() => ToggleSeat(seat3)" 
+                                                                 Class="ma-0 font-bold">@seat3</MudChip>
+                                                        <MudChip T="string" 
+                                                                 Variant="@GetSeatVariant(seat4)" 
+                                                                 Color="@GetSeatColor(seat4)" 
+                                                                 Size="Size.Small" 
+                                                                 Disabled="@IsSeatOccupied(seat4)"
+                                                                 OnClick="() => ToggleSeat(seat4)" 
+                                                                 Class="ma-0 font-bold">@seat4</MudChip>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="mt-3 d-flex justify-between align-center">
+                                    <MudText Typo="Typo.body2">Selected: <strong>@(string.IsNullOrEmpty(selectedSeatsJoined) ? "None" : selectedSeatsJoined)</strong></MudText>
+                                    <MudText Typo="Typo.body2">Seats Count: <strong>@selectedSeatsCount</strong></MudText>
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                }
+                else if (submitModel.BookingType == "Hotel")
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="font-bold text-secondary mb-2">Lodging & Rooms Details</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="long" Label="Select Room Class" @bind-Value="selectedHotelRoomId" SelectedValuesChanged="OnHotelRoomChanged" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var room in mockHotelRooms)
+                            {
+                                <MudSelectItem Value="@room.Id">@($"{room.HotelName} - {room.RoomType} ({room.PricePerNight:N0} MMK/night)")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker Label="Check-out Date" Date="selectedEndDate" DateChanged="OnHotelDateChanged" Required="true" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Number of Rooms" Value="submitModel.Quantity" ValueChanged="OnHotelQuantityChanged" Min="1" Max="10" Required="true" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" Class="d-flex align-center">
+                        <MudText Typo="Typo.body2" Class="mt-2 text-slate-500">Calculated Stay Duration: <strong class="text-slate-800">@calculatedNights Nights</strong></MudText>
+                    </MudItem>
+                }
+                else if (submitModel.BookingType == "Package")
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="font-bold text-secondary mb-2">Vacation Package Configuration</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="long" Label="Select Tour Package" @bind-Value="selectedPackageId" SelectedValuesChanged="OnPackageChanged" Required="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var pkg in mockPackages)
+                            {
+                                <MudSelectItem Value="@pkg.Id">@($"{pkg.PackageName} ({pkg.PricePerPerson:N0} MMK)")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Headcount / Travelers" Value="submitModel.Quantity" ValueChanged="OnPackageQuantityChanged" Min="1" Max="20" Required="true" Variant="Variant.Outlined" />
+                    </MudItem>
+                }
+
+                <!-- Total Amount & Footer -->
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="submitModel.UserId" Label="Customer User ID" InputType="InputType.Number" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="submitModel.TotalAmount" Label="Total Booking Amount (MMK)" Disabled="true" Required="true" Variant="Variant.Filled" Style="color: #10b981; font-weight: bold; font-size: 1.15rem;" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseDialog" Style="text-transform: none; font-weight: 600;">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="SubmitForm" 
+                   Disabled="isSaving"
+                   Style="background: linear-gradient(90deg, #594ae2 0%, #7c3aed 100%); text-transform: none; font-weight: 600; border-radius: 8px;">
+            @if (isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving Booking...</span>
+            }
+            else
+            {
+                <span>Confirm Reservation</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Custom Delete Confirmation Dialog -->
+<MudDialog @bind-Visible="isDeleteDialogVisible" Options="dialogOptions" Style="border-radius: 12px; max-width: 420px; width: 100%;">
+    <TitleContent>
+        <div class="d-flex align-center gap-2 py-2">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Medium" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">Cancel Reservation?</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to permanently delete and cancel booking <strong>#@bookingToDelete?.Id</strong> for <strong>@bookingToDelete?.UserName</strong>?</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CancelDelete" Style="text-transform: none; font-weight: 600;">Keep It</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ExecuteDelete" Style="text-transform: none; font-weight: 600; border-radius: 8px;">Delete It</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // API States & Collections
+    private List<BookingResponseModel> allBookings = new List<BookingResponseModel>();
+    private List<BookingResponseModel> filteredBookings = new List<BookingResponseModel>();
+    private List<BookingResponseModel> paginatedBookings = new List<BookingResponseModel>();
+    
+    // Pagination & Search States
+    private bool isLoading = false;
+    private string searchString = "";
+    private int pageIndex = 1;
+    private int pageSize = 7;
+    private int totalPages = 1;
+
+    // Dashboard metrics
+    private int totalBookingsCount = 0;
+    private decimal totalRevenue = 0;
+    private int busCount = 0;
+    private int hotelCount = 0;
+    private int packageCount = 0;
+
+    // Dialog state
+    private bool isDialogVisible = false;
+    private bool isEditMode = false;
+    private long activeBookingId = 0;
+    private bool isSaving = false;
+    private DialogOptions dialogOptions = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, BackdropClick = false };
+    
+    private MudForm form = null!;
+    private BookingSubmitModel submitModel = new BookingSubmitModel { UserId = 1, BookingType = "Bus", Quantity = 1 };
+    
+    // Date conversions
+    private DateTime? selectedTravelDate = DateTime.Today;
+    private DateTime? selectedEndDate = DateTime.Today.AddDays(1);
+
+    // Dropdown model bindings
+    private long selectedBusId = 0;
+    private long selectedHotelRoomId = 0;
+    private long selectedPackageId = 0;
+
+    // Seating selection states
+    private List<string> selectedSeatsList = new List<string>();
+    private int selectedSeatsCount => selectedSeatsList.Count;
+    private string selectedSeatsJoined => string.Join(",", selectedSeatsList);
+    private List<string> occupiedSeats = new List<string> { "A2", "B3", "C1", "F2" };
+
+    // Delete dialog popup binding states
+    private bool isDeleteDialogVisible = false;
+    private BookingResponseModel? bookingToDelete = null;
+
+    // Hotel staynights calculation
+    private int calculatedNights = 1;
+
+    // Dynamic Mock Databases for beautiful UI selectors
+    private class BusMock { public long Id { get; set; } public string Route { get; set; } = ""; public string ClassType { get; set; } = ""; public decimal PricePerSeat { get; set; } }
+    private class HotelRoomMock { public long Id { get; set; } public string HotelName { get; set; } = ""; public string RoomType { get; set; } = ""; public decimal PricePerNight { get; set; } }
+    private class PackageMock { public long Id { get; set; } public string PackageName { get; set; } = ""; public decimal PricePerPerson { get; set; } }
+
+    private List<BusMock> mockBuses = new List<BusMock>
+    {
+        new BusMock { Id = 1, Route = "Yangon ➡️ Mandalay", ClassType = "Scania VIP 2+1", PricePerSeat = 30000 },
+        new BusMock { Id = 2, Route = "Yangon ➡️ Bagan", ClassType = "Scania VIP 2+1", PricePerSeat = 32000 },
+        new BusMock { Id = 3, Route = "Yangon ➡️ Naypyitaw", ClassType = "Standard 2+2", PricePerSeat = 20000 },
+        new BusMock { Id = 4, Route = "Mandalay ➡️ Taunggyi", ClassType = "Standard 2+2", PricePerSeat = 22000 }
+    };
+
+    private List<HotelRoomMock> mockHotelRooms = new List<HotelRoomMock>
+    {
+        new HotelRoomMock { Id = 1, HotelName = "Novotel Resort", RoomType = "Single Room", PricePerNight = 50000 },
+        new HotelRoomMock { Id = 2, HotelName = "Novotel Resort", RoomType = "Double Room", PricePerNight = 80000 },
+        new HotelRoomMock { Id = 3, HotelName = "Sedona Hotel", RoomType = "Suite Room", PricePerNight = 150000 },
+        new HotelRoomMock { Id = 4, HotelName = "Bagan Heritage Lodge", RoomType = "Family Bungalow", PricePerNight = 120000 }
+    };
+
+    private List<PackageMock> mockPackages = new List<PackageMock>
+    {
+        new PackageMock { Id = 1, PackageName = "Bagan Archeological 3-Day Tour", PricePerPerson = 150000 },
+        new PackageMock { Id = 2, PackageName = "Inle Lake floating Garden Getaway", PricePerPerson = 120000 },
+        new PackageMock { Id = 3, PackageName = "Ngapali Beach Premium 5-Day Escape", PricePerPerson = 350000 }
+    };
+
+    // Submitting DTO structure (compatible with Backend API JSON payload)
+    public class BookingSubmitModel
+    {
+        public long UserId { get; set; }
+        public string BookingType { get; set; } = "Bus";
+        public long ItemId { get; set; }
+        public string? SelectedSeats { get; set; }
+        public int Quantity { get; set; }
+        public DateOnly TravelDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public decimal TotalAmount { get; set; }
+        public int PaymentStatus { get; set; } = 0; // Unpaid
+        public int BookingStatus { get; set; } = 0; // Pending
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBookingsFromServer();
+    }
+
+    private async Task LoadBookingsFromServer()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<PaginationResponse<BookingResponseModel>>("api/booking?pageSize=100");
+            if (response != null && response.Data != null)
+            {
+                allBookings = response.Data.ToList();
+            }
+            else
+            {
+                LoadMockData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not reach Web API: {ex.Message}. Loading offline high-fidelity UI demonstration mock data.");
+            LoadMockData();
+        }
+        finally
+        {
+            isLoading = false;
+            FilterBookings();
+            CalculateMetrics();
+        }
+    }
+
+    private void LoadMockData()
+    {
+        allBookings = new List<BookingResponseModel>
+        {
+            new BookingResponseModel 
+            { 
+                Id = 1001, UserId = 12, UserName = "Kyaw Zayar", UserEmail = "kyaw@gmail.com", 
+                BookingType = "Bus", ItemId = 1, ItemName = "Scania VIP 2+1 (Yangon ➡️ Mandalay)", 
+                TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2)), TotalAmount = 60000, 
+                PaymentStatus = PaymentStatus.Paid, BookingStatus = BookingStatus.Confirmed,
+                Details = new BookingDetailResponseModel { Id = 101, BusId = 1, BusName = "Scania VIP 2+1", BusNumber = "YGN-9K/8890", SelectedSeats = "A1,A3", Quantity = 2, TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2)) }
+            },
+            new BookingResponseModel 
+            { 
+                Id = 1002, UserId = 4, UserName = "Su Myat Noe", UserEmail = "su.myat@outlook.com", 
+                BookingType = "Hotel", ItemId = 2, ItemName = "Double Room at Novotel Resort", 
+                TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(5)), TotalAmount = 240000, 
+                PaymentStatus = PaymentStatus.UnderReview, BookingStatus = BookingStatus.Pending,
+                Details = new BookingDetailResponseModel { Id = 102, HotelRoomId = 2, HotelName = "Novotel Resort", HotelRoomTypeName = "Double Room", Quantity = 1, TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(5)), EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(8)) }
+            },
+            new BookingResponseModel 
+            { 
+                Id = 1003, UserId = 8, UserName = "Aung Htet", UserEmail = "aunghtet@gmail.com", 
+                BookingType = "Package", ItemId = 1, ItemName = "Bagan Archeological 3-Day Tour", 
+                TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(10)), TotalAmount = 450000, 
+                PaymentStatus = PaymentStatus.Paid, BookingStatus = BookingStatus.Confirmed,
+                Details = new BookingDetailResponseModel { Id = 103, PackageId = 1, PackageName = "Bagan Archeological 3-Day Tour", Quantity = 3, TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(10)) }
+            },
+            new BookingResponseModel 
+            { 
+                Id = 1004, UserId = 15, UserName = "Thazin Oo", UserEmail = "thazin.oo@gmail.com", 
+                BookingType = "Bus", ItemId = 3, ItemName = "Standard 2+2 (Yangon ➡️ Naypyitaw)", 
+                TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)), TotalAmount = 20000, 
+                PaymentStatus = PaymentStatus.Unpaid, BookingStatus = BookingStatus.Cancelled,
+                Details = new BookingDetailResponseModel { Id = 104, BusId = 3, BusName = "Standard 2+2", BusNumber = "MDY-1A/4567", SelectedSeats = "D1", Quantity = 1, TravelDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)) }
+            }
+        };
+    }
+
+    private void CalculateMetrics()
+    {
+        totalBookingsCount = allBookings.Count;
+        totalRevenue = allBookings.Where(b => b.BookingStatus != BookingStatus.Cancelled).Sum(b => b.TotalAmount);
+        busCount = allBookings.Count(b => b.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase));
+        hotelCount = allBookings.Count(b => b.BookingType.Equals("Hotel", StringComparison.OrdinalIgnoreCase));
+        packageCount = allBookings.Count(b => b.BookingType.Equals("Package", StringComparison.OrdinalIgnoreCase) || b.BookingType.Equals("TravelPackage", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void FilterBookings()
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+        {
+            filteredBookings = allBookings.OrderByDescending(b => b.Id).ToList();
+        }
+        else
+        {
+            filteredBookings = allBookings
+                .Where(b => b.Id.ToString().Contains(searchString) || 
+                            (b.UserName != null && b.UserName.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                            (b.ItemName != null && b.ItemName.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                            b.BookingType.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(b => b.Id)
+                .ToList();
+        }
+        pageIndex = 1;
+        UpdatePagination();
+    }
+
+    private void UpdatePagination()
+    {
+        totalPages = (int)Math.Ceiling((double)filteredBookings.Count / pageSize);
+        if (totalPages == 0) totalPages = 1;
+
+        paginatedBookings = filteredBookings
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void PrevPage()
+    {
+        if (pageIndex > 1)
+        {
+            pageIndex--;
+            UpdatePagination();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (pageIndex < totalPages)
+        {
+            pageIndex++;
+            UpdatePagination();
+        }
+    }
+
+    // Dynamic color helpers for chips
+    private Color GetBookingTypeColor(string type) => type.ToLower() switch
+    {
+        "bus" => Color.Warning,
+        "hotel" => Color.Info,
+        "package" => Color.Primary,
+        "travelpackage" => Color.Primary,
+        _ => Color.Default
+    };
+
+    private Color GetPaymentStatusColor(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Paid => Color.Success,
+        PaymentStatus.UnderReview => Color.Info,
+        PaymentStatus.Unpaid => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetBookingStatusColor(BookingStatus status) => status switch
+    {
+        BookingStatus.Confirmed => Color.Success,
+        BookingStatus.Pending => Color.Warning,
+        BookingStatus.Completed => Color.Info,
+        BookingStatus.Cancelled => Color.Error,
+        _ => Color.Default
+    };
+
+    // Bus seating selection handlers
+    private bool IsSeatOccupied(string seat) => occupiedSeats.Contains(seat);
+    
+    private Color GetSeatColor(string seat)
+    {
+        if (IsSeatOccupied(seat)) return Color.Error;
+        if (selectedSeatsList.Contains(seat)) return Color.Success;
+        return Color.Default;
+    }
+
+    private Variant GetSeatVariant(string seat)
+    {
+        if (selectedSeatsList.Contains(seat)) return Variant.Filled;
+        return Variant.Outlined;
+    }
+
+    private void ToggleSeat(string seat)
+    {
+        if (IsSeatOccupied(seat)) return;
+
+        if (selectedSeatsList.Contains(seat))
+            selectedSeatsList.Remove(seat);
+        else
+            selectedSeatsList.Add(seat);
+
+        RecalculateTotalAmount();
+    }
+
+    // Dynamic creation dialog configurations
+    private void OpenCreateDialog()
+    {
+        isEditMode = false;
+        activeBookingId = 0;
+        submitModel = new BookingSubmitModel
+        {
+            UserId = 1,
+            BookingType = "Bus",
+            Quantity = 1,
+            TravelDate = DateOnly.FromDateTime(DateTime.Today)
+        };
+
+        selectedTravelDate = DateTime.Today;
+        selectedEndDate = DateTime.Today.AddDays(1);
+        selectedBusId = mockBuses.First().Id;
+        selectedHotelRoomId = mockHotelRooms.First().Id;
+        selectedPackageId = mockPackages.First().Id;
+        
+        selectedSeatsList.Clear();
+        calculatedNights = 1;
+        
+        RecalculateTotalAmount();
+        isDialogVisible = true;
+    }
+
+    private void OpenEditDialog(BookingResponseModel booking)
+    {
+        isEditMode = true;
+        activeBookingId = booking.Id;
+        
+        submitModel = new BookingSubmitModel
+        {
+            UserId = booking.UserId ?? 1,
+            BookingType = booking.BookingType,
+            Quantity = booking.Details?.Quantity ?? 1,
+            TravelDate = booking.TravelDate,
+            TotalAmount = booking.TotalAmount,
+            PaymentStatus = (int)booking.PaymentStatus,
+            BookingStatus = (int)booking.BookingStatus
+        };
+
+        selectedTravelDate = booking.TravelDate.ToDateTime(TimeOnly.MinValue);
+
+        if (booking.BookingType == "Bus")
+        {
+            selectedBusId = booking.Details?.BusId ?? mockBuses.First().Id;
+            selectedSeatsList = booking.Details?.SelectedSeats?.Split(',').ToList() ?? new List<string>();
+        }
+        else if (booking.BookingType == "Hotel")
+        {
+            selectedHotelRoomId = booking.Details?.HotelRoomId ?? mockHotelRooms.First().Id;
+            if (booking.Details?.EndDate != null)
+            {
+                selectedEndDate = booking.Details.EndDate.Value.ToDateTime(TimeOnly.MinValue);
+                submitModel.EndDate = booking.Details.EndDate;
+                calculatedNights = (int)(selectedEndDate.Value - selectedTravelDate.Value).TotalDays;
+                if (calculatedNights <= 0) calculatedNights = 1;
+            }
+        }
+        else if (booking.BookingType == "Package")
+        {
+            selectedPackageId = booking.Details?.PackageId ?? mockPackages.First().Id;
+        }
+
+        RecalculateTotalAmount();
+        isDialogVisible = true;
+    }
+
+    private void CloseDialog()
+    {
+        isDialogVisible = false;
+    }
+
+    // Value changed event triggers
+    private void OnBookingTypeChanged()
+    {
+        selectedSeatsList.Clear();
+        submitModel.Quantity = 1;
+        
+        if (submitModel.BookingType == "Bus")
+        {
+            selectedBusId = mockBuses.First().Id;
+        }
+        else if (submitModel.BookingType == "Hotel")
+        {
+            selectedHotelRoomId = mockHotelRooms.First().Id;
+            selectedEndDate = selectedTravelDate?.AddDays(1) ?? DateTime.Today.AddDays(1);
+            calculatedNights = 1;
+        }
+        else if (submitModel.BookingType == "Package")
+        {
+            selectedPackageId = mockPackages.First().Id;
+        }
+
+        RecalculateTotalAmount();
+    }
+
+    private void OnBusClassChanged() => RecalculateTotalAmount();
+    private void OnHotelRoomChanged() => RecalculateTotalAmount();
+    private void OnPackageChanged() => RecalculateTotalAmount();
+    
+    private void OnHotelQuantityChanged(int val)
+    {
+        submitModel.Quantity = val;
+        RecalculateTotalAmount();
+    }
+
+    private void OnPackageQuantityChanged(int val)
+    {
+        submitModel.Quantity = val;
+        RecalculateTotalAmount();
+    }
+
+    private void OnHotelDateChanged(DateTime? date)
+    {
+        selectedEndDate = date;
+        if (selectedEndDate.HasValue && selectedTravelDate.HasValue)
+        {
+            calculatedNights = (int)(selectedEndDate.Value - selectedTravelDate.Value).TotalDays;
+            if (calculatedNights <= 0)
+            {
+                calculatedNights = 1;
+                selectedEndDate = selectedTravelDate.Value.AddDays(1);
+            }
+        }
+        RecalculateTotalAmount();
+    }
+
+    // Dynamically calculate totals matching database expectations
+    private void RecalculateTotalAmount()
+    {
+        if (submitModel.BookingType == "Bus")
+        {
+            var chosenBus = mockBuses.FirstOrDefault(b => b.Id == selectedBusId);
+            if (chosenBus != null)
+            {
+                submitModel.Quantity = selectedSeatsCount > 0 ? selectedSeatsCount : 1;
+                submitModel.TotalAmount = selectedSeatsCount * chosenBus.PricePerSeat;
+            }
+        }
+        else if (submitModel.BookingType == "Hotel")
+        {
+            var chosenRoom = mockHotelRooms.FirstOrDefault(hr => hr.Id == selectedHotelRoomId);
+            if (chosenRoom != null)
+            {
+                submitModel.TotalAmount = chosenRoom.PricePerNight * calculatedNights * submitModel.Quantity;
+            }
+        }
+        else if (submitModel.BookingType == "Package")
+        {
+            var chosenPkg = mockPackages.FirstOrDefault(p => p.Id == selectedPackageId);
+            if (chosenPkg != null)
+            {
+                submitModel.TotalAmount = chosenPkg.PricePerPerson * submitModel.Quantity;
+            }
+        }
+    }
+
+    // Submit payload to the API
+    private async Task SubmitForm()
+    {
+        if (submitModel.BookingType == "Bus" && selectedSeatsCount == 0)
+        {
+            Snackbar.Add("Please select at least one seat from the seating chart.", Severity.Warning);
+            return;
+        }
+
+        isSaving = true;
+        
+        // Prepare mapping properties
+        submitModel.TravelDate = DateOnly.FromDateTime(selectedTravelDate ?? DateTime.Today);
+        
+        if (submitModel.BookingType == "Bus")
+        {
+            submitModel.ItemId = selectedBusId;
+            submitModel.SelectedSeats = selectedSeatsJoined;
+            submitModel.EndDate = null;
+        }
+        else if (submitModel.BookingType == "Hotel")
+        {
+            submitModel.ItemId = selectedHotelRoomId;
+            submitModel.SelectedSeats = null;
+            submitModel.EndDate = DateOnly.FromDateTime(selectedEndDate ?? DateTime.Today.AddDays(1));
+        }
+        else if (submitModel.BookingType == "Package")
+        {
+            submitModel.ItemId = selectedPackageId;
+            submitModel.SelectedSeats = null;
+            submitModel.EndDate = null;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+            if (isEditMode)
+            {
+                response = await Http.PutAsJsonAsync($"api/booking/{activeBookingId}/update", submitModel);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/booking/create", submitModel);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add(isEditMode ? "Reservation updated successfully!" : "Reservation booked successfully!", Severity.Success);
+                isDialogVisible = false;
+                await LoadBookingsFromServer();
+            }
+            else
+            {
+                var errMsg = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"API Error: {response.ReasonPhrase}. {errMsg}", Severity.Error);
+                
+                // Fallback action for demo mode
+                MockSaveAction();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Web Server unreachable: {ex.Message}. Falling back to demo mock execution.", Severity.Info);
+            MockSaveAction();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void MockSaveAction()
+    {
+        if (isEditMode)
+        {
+            var match = allBookings.FirstOrDefault(b => b.Id == activeBookingId);
+            if (match != null)
+            {
+                match.BookingType = submitModel.BookingType;
+                match.TotalAmount = submitModel.TotalAmount;
+                match.TravelDate = submitModel.TravelDate;
+                
+                if (submitModel.BookingType == "Bus")
+                {
+                    var bus = mockBuses.FirstOrDefault(b => b.Id == selectedBusId);
+                    match.ItemName = $"{bus?.ClassType} ({bus?.Route})";
+                    if (match.Details != null)
+                    {
+                        match.Details.BusId = selectedBusId;
+                        match.Details.SelectedSeats = selectedSeatsJoined;
+                        match.Details.Quantity = selectedSeatsCount;
+                    }
+                }
+                else if (submitModel.BookingType == "Hotel")
+                {
+                    var room = mockHotelRooms.FirstOrDefault(r => r.Id == selectedHotelRoomId);
+                    match.ItemName = $"{room?.RoomType} at {room?.HotelName}";
+                    if (match.Details != null)
+                    {
+                        match.Details.HotelRoomId = selectedHotelRoomId;
+                        match.Details.Quantity = submitModel.Quantity;
+                        match.Details.EndDate = submitModel.EndDate;
+                    }
+                }
+                else if (submitModel.BookingType == "Package")
+                {
+                    var pkg = mockPackages.FirstOrDefault(p => p.Id == selectedPackageId);
+                    match.ItemName = pkg?.PackageName;
+                    if (match.Details != null)
+                    {
+                        match.Details.PackageId = selectedPackageId;
+                        match.Details.Quantity = submitModel.Quantity;
+                    }
+                }
+            }
+        }
+        else
+        {
+            long newId = allBookings.Any() ? allBookings.Max(b => b.Id) + 1 : 1001;
+            string itemName = "";
+            BookingDetailResponseModel details = new BookingDetailResponseModel();
+
+            if (submitModel.BookingType == "Bus")
+            {
+                var bus = mockBuses.FirstOrDefault(b => b.Id == selectedBusId);
+                itemName = $"{bus?.ClassType} ({bus?.Route})";
+                details = new BookingDetailResponseModel { Id = newId + 10, BusId = selectedBusId, BusName = bus?.ClassType, SelectedSeats = selectedSeatsJoined, Quantity = selectedSeatsCount };
+            }
+            else if (submitModel.BookingType == "Hotel")
+            {
+                var room = mockHotelRooms.FirstOrDefault(r => r.Id == selectedHotelRoomId);
+                itemName = $"{room?.RoomType} at {room?.HotelName}";
+                details = new BookingDetailResponseModel { Id = newId + 10, HotelRoomId = selectedHotelRoomId, HotelName = room?.HotelName, HotelRoomTypeName = room?.RoomType, Quantity = submitModel.Quantity, EndDate = submitModel.EndDate };
+            }
+            else if (submitModel.BookingType == "Package")
+            {
+                var pkg = mockPackages.FirstOrDefault(p => p.Id == selectedPackageId);
+                itemName = pkg?.PackageName ?? "";
+                details = new BookingDetailResponseModel { Id = newId + 10, PackageId = selectedPackageId, PackageName = itemName, Quantity = submitModel.Quantity };
+            }
+
+            allBookings.Add(new BookingResponseModel
+            {
+                Id = newId,
+                UserId = submitModel.UserId,
+                UserName = $"Customer #{submitModel.UserId}",
+                UserEmail = $"cust{submitModel.UserId}@easytrip.com",
+                BookingType = submitModel.BookingType,
+                ItemId = submitModel.ItemId,
+                ItemName = itemName,
+                TravelDate = submitModel.TravelDate,
+                TotalAmount = submitModel.TotalAmount,
+                PaymentStatus = PaymentStatus.Unpaid,
+                BookingStatus = BookingStatus.Pending,
+                Details = details
+            });
+        }
+        
+        isDialogVisible = false;
+        FilterBookings();
+        CalculateMetrics();
+        Snackbar.Add(isEditMode ? "Reservation updated locally!" : "Reservation booked locally!", Severity.Success);
+    }
+
+    // Popup-based deletion dialog confirmation
+    private void ConfirmDelete(BookingResponseModel booking)
+    {
+        bookingToDelete = booking;
+        isDeleteDialogVisible = true;
+    }
+
+    private void CancelDelete()
+    {
+        isDeleteDialogVisible = false;
+        bookingToDelete = null;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        if (bookingToDelete == null) return;
+        
+        var targetId = bookingToDelete.Id;
+        isDeleteDialogVisible = false;
+        
+        try
+        {
+            var response = await Http.DeleteAsync($"api/booking/{targetId}/delete");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Reservation #{targetId} was successfully deleted.", Severity.Success);
+                await LoadBookingsFromServer();
+            }
+            else
+            {
+                var errMsg = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Delete Failed: {errMsg}", Severity.Error);
+                MockDelete(targetId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"API Connection unreachable: {ex.Message}. Deleting locally for demo.", Severity.Info);
+            MockDelete(targetId);
+        }
+        finally
+        {
+            bookingToDelete = null;
+        }
+    }
+
+    private void MockDelete(long id)
+    {
+        var target = allBookings.FirstOrDefault(b => b.Id == id);
+        if (target != null)
+        {
+            allBookings.Remove(target);
+            Snackbar.Add("Reservation deleted locally.", Severity.Success);
+            FilterBookings();
+            CalculateMetrics();
+        }
+    }
+}

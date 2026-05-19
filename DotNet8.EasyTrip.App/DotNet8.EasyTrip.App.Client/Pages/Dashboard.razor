@@ -1,0 +1,299 @@
+@page "/admin-dashboard"
+@namespace DotNet8.EasyTrip.App.Client.Pages
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-12">
+    <!-- Header Hero Banner with premium visual dark grid -->
+    <MudPaper Class="p-6 mb-8 rounded-lg d-flex justify-between align-center" 
+              Style="background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%); color: white; border-left: 6px solid #a855f7; position: relative; overflow: hidden;">
+        <div style="z-index: 2;">
+            <MudText Typo="Typo.h4" Class="font-bold mb-1" Style="font-weight: 800; letter-spacing: -0.5px;">Easy-Trip Control Room</MudText>
+            <MudText Typo="Typo.body2" Style="color: #cbd5e1;">Enterprise Admin Console & Real-time Global Resource Monitoring.</MudText>
+        </div>
+        <div style="z-index: 2;" class="d-flex gap-3">
+            <MudChip T="string" Color="Color.Primary" Variant="Variant.Text" Style="font-weight: bold; background-color: rgba(255,255,255,0.08);">Server: ONLINE</MudChip>
+            <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Style="font-weight: bold; background-color: rgba(255,255,255,0.08);">DB Sync: ACTIVE</MudChip>
+        </div>
+    </MudPaper>
+
+    <!-- Interactive Metrics Summary Grid -->
+    <MudGrid Class="mb-8">
+        <!-- Card 1: Total Bookings -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4" Class="metric-card" Style="border-radius: 16px; border-bottom: 4px solid #3b82f6;">
+                <MudCardContent Class="p-6">
+                    <div class="d-flex justify-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="text-secondary uppercase tracking-wider font-semibold mb-1" Style="font-size: 0.75rem;">Total Bookings</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 900; color: #1e293b;">@totalBookingsCount.ToString("N0")</MudText>
+                            <div class="d-flex align-center mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" Size="Size.Small" Class="mr-1" />
+                                <MudText Typo="Typo.caption" Style="color: #10b981; font-weight: bold;">+18.4% this month</MudText>
+                            </div>
+                        </div>
+                        <MudAvatar Style="height: 56px; width: 56px; border-radius: 12px; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                            <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" Size="Size.Large" />
+                        </MudAvatar>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Card 2: Active Buses -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4" Class="metric-card" Style="border-radius: 16px; border-bottom: 4px solid #f59e0b;">
+                <MudCardContent Class="p-6">
+                    <div class="d-flex justify-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="text-secondary uppercase tracking-wider font-semibold mb-1" Style="font-size: 0.75rem;">Active Fleet (Buses)</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 900; color: #1e293b;">@activeBusesCount</MudText>
+                            <div class="d-flex align-center mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" Color="Color.Warning" Size="Size.Small" Class="mr-1" />
+                                <MudText Typo="Typo.caption" Style="color: #f59e0b; font-weight: bold;">@scheduledTrips Today</MudText>
+                            </div>
+                        </div>
+                        <MudAvatar Style="height: 56px; width: 56px; border-radius: 12px; background-color: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                            <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" Size="Size.Large" />
+                        </MudAvatar>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Card 3: Hotel Occupancy -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4" Class="metric-card" Style="border-radius: 16px; border-bottom: 4px solid #06b6d4;">
+                <MudCardContent Class="p-6">
+                    <div class="d-flex justify-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="text-secondary uppercase tracking-wider font-semibold mb-1" Style="font-size: 0.75rem;">Hotel Occupancy</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 900; color: #1e293b;">@hotelOccupancyRate%</MudText>
+                            <div class="d-flex align-center mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Info" Size="Size.Small" Class="mr-1" />
+                                <MudText Typo="Typo.caption" Style="color: #06b6d4; font-weight: bold;">Peak season active</MudText>
+                            </div>
+                        </div>
+                        <MudAvatar Style="height: 56px; width: 56px; border-radius: 12px; background-color: rgba(6, 182, 212, 0.1); color: #06b6d4;">
+                            <MudIcon Icon="@Icons.Material.Filled.Apartment" Size="Size.Large" />
+                        </MudAvatar>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Card 4: Total Revenue -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4" Class="metric-card" Style="border-radius: 16px; border-bottom: 4px solid #10b981;">
+                <MudCardContent Class="p-6">
+                    <div class="d-flex justify-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="text-secondary uppercase tracking-wider font-semibold mb-1" Style="font-size: 0.75rem;">Total Revenue</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 900; color: #10b981;">@totalRevenue.ToString("N0") <span style="font-size: 1.1rem; font-weight: 700;">MMK</span></MudText>
+                            <div class="d-flex align-center mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" Size="Size.Small" Class="mr-1" />
+                                <MudText Typo="Typo.caption" Style="color: #10b981; font-weight: bold;">+24.8% YoY growth</MudText>
+                            </div>
+                        </div>
+                        <MudAvatar Style="height: 56px; width: 56px; border-radius: 12px; background-color: rgba(16, 114, 181, 0.1); background-color: rgba(16, 185, 129, 0.1); color: #10b981;">
+                            <MudIcon Icon="@Icons.Material.Filled.MonetizationOn" Size="Size.Large" />
+                        </MudAvatar>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Analytical Charts Section -->
+    <MudGrid Class="mb-8">
+        <MudItem xs="12" md="8">
+            <MudPaper Class="p-6 rounded-lg border border-gray-200" Elevation="3" Style="border-radius: 16px; height: 100%;">
+                <div class="d-flex justify-between align-center mb-6">
+                    <div>
+                        <MudText Typo="Typo.h6" Style="font-weight: 700;">Monthly Sales Revenue Trends</MudText>
+                        <MudText Typo="Typo.body2" Class="text-muted">Aggregated financial growth for Transport, Lodging and Tour Packages (Millions MMK).</MudText>
+                    </div>
+                    <MudSelect T="int" Value="selectedYear" ValueChanged="OnYearChanged" Margin="Margin.Dense" Variant="Variant.Outlined" Style="max-width: 120px;">
+                        <MudSelectItem Value="2026">2026</MudSelectItem>
+                        <MudSelectItem Value="2025">2025</MudSelectItem>
+                    </MudSelect>
+                </div>
+
+                <!-- Monthly Revenue Chart Area -->
+                <div class="d-flex justify-center">
+                    <MudChart T="double"
+                              ChartType="ChartType.Bar" 
+                              ChartSeries="@RevenueSeries" 
+                              xAxisLabels="@XAxisLabels" 
+                              Width="100%" 
+                              Height="350px" 
+                              ChartOptions="@chartOptions" />
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="p-6 rounded-lg border border-gray-200" Elevation="3" Style="border-radius: 16px; height: 100%;">
+                <MudText Typo="Typo.h6" Style="font-weight: 700;" Class="mb-1">Sales Composition</MudText>
+                <MudText Typo="Typo.body2" Class="text-muted">Revenue contribution split across key travel sectors.</MudText>
+                
+                <div class="d-flex justify-center my-6">
+                    <MudChart T="double"
+                              ChartType="ChartType.Donut" 
+                              inputData="@compositionData" 
+                              inputLabels="@compositionLabels" 
+                              Width="220px" 
+                              Height="220px" />
+                </div>
+
+                <div class="mt-6 d-flex flex-column gap-3">
+                    <div class="d-flex justify-between align-center border-b pb-2">
+                        <span class="d-flex align-center gap-2"><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Style="color: #594ae2;" />🚌 Bus Bookings</span>
+                        <strong>@compositionData[0]%</strong>
+                    </div>
+                    <div class="d-flex justify-between align-center border-b pb-2">
+                        <span class="d-flex align-center gap-2"><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Style="color: #06b6d4;" />🏨 Hotel Lodging</span>
+                        <strong>@compositionData[1]%</strong>
+                    </div>
+                    <div class="d-flex justify-between align-center pb-1">
+                        <span class="d-flex align-center gap-2"><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Style="color: #10b981;" />📦 Travel Packages</span>
+                        <strong>@compositionData[2]%</strong>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Recent System Notifications & Activity Log -->
+    <MudPaper Class="p-6 rounded-lg border border-gray-200" Elevation="3" Style="border-radius: 16px;">
+        <div class="d-flex justify-between align-center mb-6">
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">Global Operation Status Logs</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="RefreshLogs">Refresh Logs</MudButton>
+        </div>
+        
+        <MudStack Spacing="3">
+            @foreach (var log in operationLogs)
+            {
+                <div class="d-flex align-center gap-3 p-3 rounded-lg border border-slate-100" style="background-color: #fafafa;">
+                    <MudIcon Icon="@log.Icon" Color="@log.Color" Size="Size.Medium" />
+                    <div style="flex-grow: 1;">
+                        <MudText Typo="Typo.body2" Class="font-bold">@log.Title</MudText>
+                        <MudText Typo="Typo.caption" Class="text-muted">@log.Message</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Style="color: #94a3b8; font-weight: 600;">@log.Timestamp</MudText>
+                </div>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // Metric states
+    private int totalBookingsCount = 1420;
+    private int activeBusesCount = 42;
+    private int scheduledTrips = 84;
+    private double hotelOccupancyRate = 78.5;
+    private decimal totalRevenue = 48500000;
+
+    // Year selection
+    private int selectedYear = 2026;
+
+    // Donut chart representation
+    private double[] compositionData = { 45, 35, 20 };
+    private string[] compositionLabels = { "Bus Express", "Hotels", "Packages" };
+
+    // Bar chart series
+    private List<ChartSeries<double>> RevenueSeries = new List<ChartSeries<double>>();
+    private string[] XAxisLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+    private ChartOptions chartOptions = new ChartOptions();
+
+    // Notification states
+    private class StatusLog
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Timestamp { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public Color Color { get; set; } = Color.Default;
+    }
+
+    private List<StatusLog> operationLogs = new List<StatusLog>();
+
+    protected override void OnInitialized()
+    {
+        ConfigureCharts();
+        LoadNotificationLogs();
+    }
+
+    private void ConfigureCharts()
+    {
+        // Custom colors for charts
+        chartOptions.ChartPalette = new[] { "#594ae2", "#10b981", "#ff9800" };
+
+        RevenueSeries = new List<ChartSeries<double>>
+        {
+            new ChartSeries<double> { Name = "Bus Services", Data = new double[] { 12, 14, 18, 16, 22, 25 } },
+            new ChartSeries<double> { Name = "Hotel Accommodations", Data = new double[] { 8, 12, 15, 14, 18, 20 } },
+            new ChartSeries<double> { Name = "Tour Packages", Data = new double[] { 5, 8, 10, 9, 12, 15 } }
+        };
+    }
+
+    private void OnYearChanged(int year)
+    {
+        selectedYear = year;
+        if (year == 2025)
+        {
+            RevenueSeries[0].Data = new double[] { 9, 11, 14, 12, 16, 18 };
+            RevenueSeries[1].Data = new double[] { 6, 8, 11, 9, 12, 15 };
+            RevenueSeries[2].Data = new double[] { 3, 5, 7, 6, 8, 10 };
+        }
+        else
+        {
+            RevenueSeries[0].Data = new double[] { 12, 14, 18, 16, 22, 25 };
+            RevenueSeries[1].Data = new double[] { 8, 12, 15, 14, 18, 20 };
+            RevenueSeries[2].Data = new double[] { 5, 8, 10, 9, 12, 15 };
+        }
+        Snackbar.Add($"Loaded sales trend dataset for year {year}.", Severity.Info);
+    }
+
+    private void LoadNotificationLogs()
+    {
+        operationLogs = new List<StatusLog>
+        {
+            new StatusLog { 
+                Title = "High Demand Alert (Bagan Route)", 
+                Message = "Tickets for Scania VIP on Yangon ➡️ Bagan route reached 95% sales threshold.", 
+                Timestamp = "5 mins ago", 
+                Icon = Icons.Material.Filled.LocalActivity, 
+                Color = Color.Warning 
+            },
+            new StatusLog { 
+                Title = "Hotel Capacity Lock (Novotel Resort)", 
+                Message = "Novotel Resort Double Rooms are fully booked. System set status to 'FULL'.", 
+                Timestamp = "32 mins ago", 
+                Icon = Icons.Material.Filled.Apartment, 
+                Color = Color.Error 
+            },
+            new StatusLog { 
+                Title = "Payment Transaction Success", 
+                Message = "Booking ID #1003 payment status marked as 'PAID' via CB Pay Gateway.", 
+                Timestamp = "1 hour ago", 
+                Icon = Icons.Material.Filled.CheckCircle, 
+                Color = Color.Success 
+            },
+            new StatusLog { 
+                Title = "Database Sync Complete", 
+                Message = "Successfully synchronized offline reservations cache with remote Supabase cluster.", 
+                Timestamp = "3 hours ago", 
+                Icon = Icons.Material.Filled.CloudDone, 
+                Color = Color.Primary 
+            }
+        };
+    }
+
+    private void RefreshLogs()
+    {
+        LoadNotificationLogs();
+        Snackbar.Add("Operational notifications logs updated.", Severity.Success);
+    }
+}

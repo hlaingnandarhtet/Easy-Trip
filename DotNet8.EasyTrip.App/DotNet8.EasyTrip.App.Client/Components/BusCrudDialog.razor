@@ -1,0 +1,202 @@
+@namespace DotNet8.EasyTrip.App.Client.Components
+@using MudBlazor
+
+<MudDialog Style="border-radius: 16px; overflow: hidden; max-width: 650px; width: 100%;">
+    <TitleContent>
+        <div class="d-flex align-center gap-2 py-2">
+            <MudIcon Icon="@(BusModel.Id == 0 ? Icons.Material.Filled.AddCircle : Icons.Material.Filled.Edit)" 
+                     Color="Color.Primary" 
+                     Size="Size.Medium" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">
+                @(BusModel.Id == 0 ? "Create New Bus Route" : $"Edit Bus Route #{BusModel.Id}")
+            </MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm Model="@BusModel" @ref="form" @bind-IsValid="@isValid" Class="py-2">
+            <MudGrid Spacing="3">
+                <!-- Bus Name & Number -->
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" 
+                                  Label="Bus Name / Operator" 
+                                  @bind-Value="BusModel.BusName" 
+                                  Required="true" 
+                                  RequiredError="Bus operator name is required"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" 
+                                  Label="Bus Number / License" 
+                                  @bind-Value="BusModel.BusNumber" 
+                                  Required="true" 
+                                  RequiredError="License number is required"
+                                  Variant="Variant.Outlined" 
+                                  Placeholder="e.g. YGN-3B/5543" />
+                </MudItem>
+
+                <!-- Class & Status Selector -->
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" 
+                               Label="Bus Class" 
+                               @bind-Value="BusModel.BusClass" 
+                               Required="true" 
+                               Variant="Variant.Outlined" 
+                               AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("Scania VIP 2+1")">🚌 Scania VIP (2+1 Layout)</MudSelectItem>
+                        <MudSelectItem Value="@("Standard 2+2")">🚌 Standard Express (2+2 Layout)</MudSelectItem>
+                        <MudSelectItem Value="@("Business VIP 1+1")">👑 Business VIP (1+1 Layout)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" 
+                               Label="Operational Status" 
+                               @bind-Value="BusModel.BusStatus" 
+                               Required="true" 
+                               Variant="Variant.Outlined" 
+                               AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="1">🟢 Active / Scheduled</MudSelectItem>
+                        <MudSelectItem Value="0">🟡 Under Maintenance</MudSelectItem>
+                        <MudSelectItem Value="2">🔴 Suspended / Out of Service</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Seats & Ticket Price -->
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" 
+                                     Label="Total Seats Capacity" 
+                                     @bind-Value="BusModel.TotalSeats" 
+                                     Min="10" 
+                                     Max="60" 
+                                     Required="true" 
+                                     RequiredError="Total seats count is required"
+                                     Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" 
+                                     Label="Ticket Price (MMK)" 
+                                     @bind-Value="BusModel.Price" 
+                                     Min="5000" 
+                                     Required="true" 
+                                     RequiredError="Ticket price is required"
+                                     Variant="Variant.Outlined" 
+                                     Format="N0" />
+                </MudItem>
+
+                <!-- Route: Start & End Points -->
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" 
+                                  Label="Origin Terminal" 
+                                  @bind-Value="BusModel.StartPoint" 
+                                  Required="true" 
+                                  RequiredError="Origin point is required"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" 
+                                  Label="Destination Terminal" 
+                                  @bind-Value="BusModel.EndPoint" 
+                                  Required="true" 
+                                  RequiredError="Destination point is required"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+
+                <!-- Travel Date & Time -->
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Departure Date" 
+                                   @bind-Date="selectedDepartureDate" 
+                                   Required="true" 
+                                   RequiredError="Departure date is required"
+                                   Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" 
+                                  Label="Departure Time / Slot" 
+                                  @bind-Value="BusModel.TimeSlot" 
+                                  Required="true" 
+                                  RequiredError="Departure time slot is required"
+                                  Variant="Variant.Outlined" 
+                                  Placeholder="e.g. 08:30 PM" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Default" 
+                   OnClick="Cancel" 
+                   Style="text-transform: none; font-weight: 600;">
+            Cancel
+        </MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Save" 
+                   Disabled="@(!isValid)"
+                   Style="background: linear-gradient(90deg, #594ae2 0%, #7c3aed 100%); text-transform: none; font-weight: 600; border-radius: 8px;">
+            Save Route Details
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] 
+    public BusUiModel BusModel { get; set; } = new BusUiModel();
+
+    private MudForm form = null!;
+    private bool isValid = false;
+    private DateTime? selectedDepartureDate;
+
+    protected override void OnInitialized()
+    {
+        if (BusModel.Id > 0 && !string.IsNullOrEmpty(BusModel.Departure))
+        {
+            if (DateTime.TryParse(BusModel.Departure, out var parsedDate))
+            {
+                selectedDepartureDate = parsedDate;
+            }
+        }
+        else
+        {
+            selectedDepartureDate = DateTime.Today.AddDays(1);
+        }
+    }
+
+    private async Task Save()
+    {
+        await form.ValidateAsync();
+        if (isValid)
+        {
+            if (selectedDepartureDate.HasValue)
+            {
+                BusModel.Departure = selectedDepartureDate.Value.ToString("yyyy-MM-dd");
+            }
+            MudDialog.Close(DialogResult.Ok(BusModel));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    // Direct representation for the UI dialogue model
+    public class BusUiModel
+    {
+        public long Id { get; set; }
+        public string BusName { get; set; } = "";
+        public string BusNumber { get; set; } = "";
+        public string BusClass { get; set; } = "Scania VIP 2+1";
+        public int TotalSeats { get; set; } = 27;
+        public decimal Price { get; set; } = 30000;
+        public string StartPoint { get; set; } = "";
+        public string EndPoint { get; set; } = "";
+        public string Departure { get; set; } = "";
+        public string Arrival { get; set; } = "";
+        public string DriverName { get; set; } = "U Ba";
+        public string TripType { get; set; } = "One-way";
+        public string TimeSlot { get; set; } = "09:00 PM";
+        public int BusStatus { get; set; } = 1;
+    }
+}
