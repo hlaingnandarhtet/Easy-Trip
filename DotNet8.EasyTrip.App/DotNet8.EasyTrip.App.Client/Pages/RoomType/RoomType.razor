@@ -21,13 +21,18 @@
     <MudPaper Class="et-table-card" Elevation="0">
         <div class="et-table-toolbar">
             <div class="d-flex align-center gap-3 flex-wrap w-100">
-                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search room type..."
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                <MudTextField T="string" @bind-Value="_searchString" Label="Room Type Name"
+                              Placeholder="Search room type..." Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Clearable="true"
                               Style="min-width: 260px; max-width: 420px; flex: 1;" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
-                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search" Style="height: 40px; text-transform: none; font-weight: 600; border-radius: 10px;">
                     Search
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilters"
+                           Style="height: 40px; border-radius: 10px; text-transform: none; font-weight: 600;" StartIcon="@Icons.Material.Filled.Clear">
+                    Reset
                 </MudButton>
             </div>
         </div>
@@ -107,6 +112,12 @@
                 .Where(rt => rt.TypeName != null && rt.TypeName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
+    }
+
+    private void ResetFilters()
+    {
+        _searchString = "";
+        PerformSearch();
     }
 
     private int GetRowNumber(RoomTypeResponseModel context)

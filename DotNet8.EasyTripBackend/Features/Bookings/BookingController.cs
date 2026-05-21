@@ -17,12 +17,19 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
         }
 
         [HttpGet]
-        public async Task<ActionResult<PaginationResponse<BookingResponseModel>>> GetBookings([FromQuery] int pageNo = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<PaginationResponse<BookingResponseModel>>> GetBookings(
+            [FromQuery] int pageNo = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? name = null,
+            [FromQuery] string? type = null,
+            [FromQuery] int? status = null,
+            [FromQuery] DateOnly? startDate = null,
+            [FromQuery] DateOnly? endDate = null)
         {
             if (pageNo < 1) pageNo = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var result = await _bookingService.GetBookingsAsync(pageNo, pageSize);
+            var result = await _bookingService.GetBookingsAsync(pageNo, pageSize, name, type, status, startDate, endDate);
             return Ok(result);
         }
 

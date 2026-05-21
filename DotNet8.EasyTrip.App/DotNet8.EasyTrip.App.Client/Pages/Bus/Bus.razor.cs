@@ -71,6 +71,13 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Bus
             _table?.ReloadServerData();
         }
 
+        private void ResetFilters()
+        {
+            _searchString = "";
+            _searchQuery = "";
+            _table?.ReloadServerData();
+        }
+
         private void OpenCreateDialog()
         {
             Nav.NavigateTo("/bus/create");

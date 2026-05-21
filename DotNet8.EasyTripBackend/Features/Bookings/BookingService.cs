@@ -61,14 +61,51 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             }
         }
 
-        public async Task<PaginationResponse<BookingResponseModel>> GetBookingsAsync(int pageNo, int pageSize)
+        public async Task<PaginationResponse<BookingResponseModel>> GetBookingsAsync(
+            int pageNo,
+            int pageSize,
+            string? name = null,
+            string? type = null,
+            int? status = null,
+            DateOnly? startDate = null,
+            DateOnly? endDate = null)
         {
-            var totalCount = await _context.Bookings.CountAsync(b => b.DeletedAt == null);
-
-            var bookings = await _context.Bookings
+            var query = _context.Bookings
                 .Include(b => b.User)
                 .Include(b => b.BookingDetails)
-                .Where(b => b.DeletedAt == null)
+                .Where(b => b.DeletedAt == null);
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(b => b.User != null && (b.User.Name.Contains(name) || b.User.Email.Contains(name)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                query = query.Where(b => b.BookingType == type);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(b => b.BookingStatus == status.Value);
+            }
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(b => b.TravelDate >= startDate.Value && b.TravelDate <= endDate.Value);
+            }
+            else if (startDate.HasValue)
+            {
+                query = query.Where(b => b.TravelDate >= startDate.Value);
+            }
+            else if (endDate.HasValue)
+            {
+                query = query.Where(b => b.TravelDate <= endDate.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var bookings = await query
                 .OrderBy(b => b.Id)
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)

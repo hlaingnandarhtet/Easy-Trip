@@ -17,13 +17,17 @@
     <MudPaper Class="et-table-card" Elevation="0">
         <div class="et-table-toolbar">
             <div class="d-flex align-center gap-3 flex-wrap w-100">
-                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search bus name or number..."
+                <MudTextField T="string" @bind-Value="_searchString" Label="Bus Name or Number" Placeholder="Search bus name or number..."
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="false"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="false" Clearable="true"
                               Style="min-width: 260px; max-width: 420px; flex: 1;" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
-                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                            OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search" Style="height: 40px; text-transform: none; font-weight: 600; border-radius: 10px;">
                     Search
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilters"
+                           Style="height: 40px; border-radius: 10px; text-transform: none; font-weight: 600;" StartIcon="@Icons.Material.Filled.Clear">
+                    Reset
                 </MudButton>
             </div>
         </div>

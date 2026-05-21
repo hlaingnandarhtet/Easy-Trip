@@ -17,13 +17,18 @@
     <MudPaper Class="et-table-card" Elevation="0">
         <div class="et-table-toolbar">
             <div class="d-flex align-center gap-3 flex-wrap w-100">
-                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search hotel or location..."
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                <MudTextField T="string" @bind-Value="_searchString" Label="Hotel Name or Location"
+                              Placeholder="Search hotel or location..." Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Clearable="true"
                               Style="min-width: 260px; max-width: 420px; flex: 1;" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
-                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search" Style="height: 40px; text-transform: none; font-weight: 600; border-radius: 10px;">
                     Search
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilters"
+                           Style="height: 40px; border-radius: 10px; text-transform: none; font-weight: 600;" StartIcon="@Icons.Material.Filled.Clear">
+                    Reset
                 </MudButton>
             </div>
         </div>
@@ -32,16 +37,14 @@
                   Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
             <HeaderContent>
                 <MudTh Style="width: 56px;">No.</MudTh>
-                @* <MudTh>Record ID</MudTh> *@
                 <MudTh>Hotel Name</MudTh>
                 <MudTh>Location</MudTh>
-                <MudTh>Rooms</MudTh>
+                @* <MudTh>Rooms</MudTh> *@
                 <MudTh>Created</MudTh>
                 <MudTh Style="text-align: right;">Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
-                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
                 <MudTd DataLabel="Hotel Name">
                     <MudText Style="font-weight: 700; color: #0F172A;">@context.HotelName</MudText>
                 </MudTd>
@@ -50,9 +53,6 @@
                         <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="color: #94A3B8;" />
                         <span style="color: #64748B;">@context.Location</span>
                     </div>
-                </MudTd>
-                <MudTd DataLabel="Rooms">
-                    <span class="et-badge et-badge--indigo">@context.HotelRooms.Count rooms</span>
                 </MudTd>
                 <MudTd DataLabel="Created" Style="color: #64748B;">@context.CreatedAt?.ToString("dd-MM-yyyy")</MudTd>
                 <MudTd DataLabel="Actions" Style="text-align: right;">

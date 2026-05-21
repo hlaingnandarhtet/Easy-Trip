@@ -13,6 +13,49 @@
                 Icon="@Icons.Material.Filled.ConfirmationNumber" />
 
     <MudPaper Class="et-table-card" Elevation="0">
+        <div class="et-table-toolbar">
+            <div class="d-flex align-end gap-3 flex-wrap w-100">
+                <div style="flex: 2 1 250px; min-width: 200px;">
+                    <MudTextField T="string" @bind-Value="_searchName" Label="Customer Name or Email"
+                                  Placeholder="Search name or email..." Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Immediate="false" Clearable="true" />
+                </div>
+                <div style="flex: 1 1 130px; min-width: 120px;">
+                    <MudSelect T="string" Label="Booking Type" @bind-Value="_selectedType" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@((string?)null)">All Types</MudSelectItem>
+                        <MudSelectItem Value="@("Bus")">Bus</MudSelectItem>
+                        <MudSelectItem Value="@("Hotel")">Hotel</MudSelectItem>
+                        <MudSelectItem Value="@("Package")">Package</MudSelectItem>
+                    </MudSelect>
+                </div>
+                <div style="flex: 1 1 130px; min-width: 120px;">
+                    <MudSelect T="int?" Label="Status" @bind-Value="_selectedStatus" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@((int?)null)">All Statuses</MudSelectItem>
+                        <MudSelectItem Value="@((int?)BookingStatusCodes.Pending)">Pending</MudSelectItem>
+                        <MudSelectItem Value="@((int?)BookingStatusCodes.Confirmed)">Confirmed</MudSelectItem>
+                        <MudSelectItem Value="@((int?)BookingStatusCodes.Rejected)">Rejected</MudSelectItem>
+                    </MudSelect>
+                </div>
+                <div style="flex: 1.2 1 150px; min-width: 140px;">
+                    <MudDatePicker Label="Start Date" @bind-Date="_startDate" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" DateFormat="dd-MM-yyyy" />
+                </div>
+                <div style="flex: 1.2 1 150px; min-width: 140px;">
+                    <MudDatePicker Label="End Date" @bind-Date="_endDate" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" DateFormat="dd-MM-yyyy" />
+                </div>
+                <div class="d-flex gap-2" style="flex: 0 0 auto; min-width: 180px;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                               OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search" Style="height: 40px; text-transform: none; font-weight: 600; border-radius: 10px;">
+                        Search
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilters"
+                               Style="height: 40px; border-radius: 10px; text-transform: none; font-weight: 600;" StartIcon="@Icons.Material.Filled.Clear">
+                        Reset
+                    </MudButton>
+                </div>
+            </div>
+        </div>
+
         <MudTable T="BookingResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
                   Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
             <HeaderContent>
@@ -119,11 +162,33 @@
     private int _currentPage;
     private int _pageSize;
 
+    // Search filter state variables
+    private string _searchName = "";
+    private string? _selectedType;
+    private int? _selectedStatus;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
     private int GetRowNumber(BookingResponseModel context)
     {
         var index = _bookingsList.IndexOf(context);
         if (index < 0) return 0;
         return (_currentPage * _pageSize) + index + 1;
+    }
+
+    private void PerformSearch()
+    {
+        _table?.ReloadServerData();
+    }
+
+    private void ResetFilters()
+    {
+        _searchName = "";
+        _selectedType = null;
+        _selectedStatus = null;
+        _startDate = null;
+        _endDate = null;
+        _table?.ReloadServerData();
     }
 
     private async Task<TableData<BookingResponseModel>> LoadServerData(TableState state, CancellationToken token)
@@ -133,6 +198,27 @@
             var pageNo = state.Page + 1;
             var pageSize = state.PageSize;
             var url = $"api/booking?pageNo={pageNo}&pageSize={pageSize}";
+
+            if (!string.IsNullOrWhiteSpace(_searchName))
+            {
+                url += $"&name={Uri.EscapeDataString(_searchName)}";
+            }
+            if (!string.IsNullOrWhiteSpace(_selectedType))
+            {
+                url += $"&type={Uri.EscapeDataString(_selectedType)}";
+            }
+            if (_selectedStatus.HasValue)
+            {
+                url += $"&status={_selectedStatus.Value}";
+            }
+            if (_startDate.HasValue)
+            {
+                url += $"&startDate={_startDate.Value.ToString("yyyy-MM-dd")}";
+            }
+            if (_endDate.HasValue)
+            {
+                url += $"&endDate={_endDate.Value.ToString("yyyy-MM-dd")}";
+            }
 
             var response = await Http.GetFromJsonAsync<PaginationResponse<BookingResponseModel>>(url);
             if (response != null)

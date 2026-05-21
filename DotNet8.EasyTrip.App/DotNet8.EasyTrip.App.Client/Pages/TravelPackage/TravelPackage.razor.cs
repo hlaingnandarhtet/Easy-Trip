@@ -61,6 +61,13 @@ namespace DotNet8.EasyTrip.App.Client.Pages.TravelPackage
             _table?.ReloadServerData();
         }
 
+        private void ResetFilters()
+        {
+            _searchString = "";
+            _searchQuery = "";
+            _table?.ReloadServerData();
+        }
+
         private void OpenCreateDialog() => Nav.NavigateTo("/travel-package/create");
 
         private void OpenEditDialog(TravelPackageResponseModel package) => Nav.NavigateTo($"/travel-package/edit/{package.Id}");

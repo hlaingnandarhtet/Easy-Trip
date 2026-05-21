@@ -6,7 +6,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
 {
     public interface IBookingService
     {
-        Task<PaginationResponse<BookingResponseModel>> GetBookingsAsync(int pageNo, int pageSize);
+        Task<PaginationResponse<BookingResponseModel>> GetBookingsAsync(int pageNo, int pageSize, string? name = null, string? type = null, int? status = null, DateOnly? startDate = null, DateOnly? endDate = null);
         Task<BookingResponseModel?> GetBookingAsync(long id);
         Task<BookingResponseModel?> GetBookingByIdAsync(long id);
         Task<BookingResponseModel> CreateBookingAsync(BookingRequestModel request);
