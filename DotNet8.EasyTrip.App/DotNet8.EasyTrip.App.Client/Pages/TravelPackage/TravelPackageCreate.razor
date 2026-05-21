@@ -1,0 +1,275 @@
+@page "/travel-package/create"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to travel packages
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.AddCircle" Class="mr-2" />
+                Add New Travel Package
+            </MudText>
+        </div>
+
+        <MudForm @ref="_form" @bind-IsValid="_success">
+            <div class="et-form-section pb-4">
+                <div class="et-form-section__title">Package Specifications</div>
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-center align-center py-12">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+                    </div>
+                }
+                else
+                {
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12">
+                            <MudTextField T="string" 
+                                          Label="Package Name" 
+                                          Required="true" 
+                                          RequiredError="Package name is required"
+                                          @bind-Value="_packageModel.PackageName" 
+                                          Variant="Variant.Outlined" 
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal" 
+                                             Label="Package Price (mmk)" 
+                                             Required="true" 
+                                             RequiredError="Price is required"
+                                             @bind-Value="_packageModel.PackagePrice" 
+                                             Min="0" 
+                                             Format="N0" 
+                                             Variant="Variant.Outlined" 
+                                             Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal" 
+                                             Label="Discount (%)" 
+                                             @bind-Value="_packageModel.Discount" 
+                                             Min="0" 
+                                             Max="100" 
+                                             Variant="Variant.Outlined" 
+                                             Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int?" 
+                                             Label="Duration (days)" 
+                                             Value="_packageModel.DurationDays" 
+                                             ValueChanged="OnDurationChanged"
+                                             Min="0" 
+                                             Variant="Variant.Outlined" 
+                                             Margin="Margin.Dense" 
+                                             HelperText="Freely set duration" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="4">
+                            <MudDatePicker Label="Start Date" 
+                                           Date="_packageModel.StartDate" 
+                                           DateChanged="OnStartDateChanged"
+                                           Variant="Variant.Outlined" 
+                                           Margin="Margin.Dense" 
+                                           Editable="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="4">
+                            <MudDatePicker Label="End Date" 
+                                           Date="_packageModel.EndDate" 
+                                           DateChanged="OnEndDateChanged"
+                                           Variant="Variant.Outlined" 
+                                           Margin="Margin.Dense" 
+                                           Editable="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long" 
+                                       Label="Bus" 
+                                       @bind-Value="_packageModel.BusId" 
+                                       Variant="Variant.Outlined" 
+                                       Margin="Margin.Dense" 
+                                       AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="long" Value="0">Select Bus (Optional)</MudSelectItem>
+                                @foreach (var b in _buses)
+                                {
+                                    <MudSelectItem T="long" Value="@b.Id">@b.BusName - @b.Class (@b.Price.ToString("N0") mmk)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long" 
+                                       Label="Hotel" 
+                                       @bind-Value="_packageModel.HotelId" 
+                                       Variant="Variant.Outlined" 
+                                       Margin="Margin.Dense" 
+                                       AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="long" Value="0">Select Hotel (Optional)</MudSelectItem>
+                                @foreach (var h in _hotels)
+                                {
+                                    <MudSelectItem T="long" Value="@h.Id">@h.HotelName (@h.Price.ToString("N0") mmk)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" 
+                                       Label="Status" 
+                                       @bind-Value="_packageModel.Status" 
+                                       Variant="Variant.Outlined" 
+                                       Margin="Margin.Dense" 
+                                       AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="string" Value="@("Active")">Active</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Inactive")">Inactive</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Expired")">Expired</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudCheckBox T="bool" 
+                                         Label="Transfer service included" 
+                                         @bind-Value="_packageModel.IsTransferIncluded" 
+                                         Color="Color.Primary" />
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudForm>
+
+        @if (!_isLoading)
+        {
+            <div class="et-form-actions">
+                <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost" Disabled="_isSaving">Cancel</MudButton>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@(!_success || _isSaving)" Class="et-btn-primary">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save Package
+                </MudButton>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private TravelPackageCreateDto _packageModel = new()
+    {
+        PackageName = "",
+        PackagePrice = 0,
+        Discount = 0,
+        DurationDays = 0,
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today,
+        Status = "Active",
+        IsTransferIncluded = true
+    };
+
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _success = false;
+    private MudForm? _form;
+
+    private List<BusSelectDto> _buses = new();
+    private List<HotelSelectDto> _hotels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var busTask = Http.GetFromJsonAsync<List<BusSelectDto>>("api/travelpackage/buses");
+            var hotelTask = Http.GetFromJsonAsync<List<HotelSelectDto>>("api/travelpackage/hotels");
+            
+            await Task.WhenAll(busTask, hotelTask);
+
+            _buses = busTask.Result ?? new();
+            _hotels = hotelTask.Result ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading options: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void OnStartDateChanged(DateTime? date)
+    {
+        _packageModel.StartDate = date;
+        if (_packageModel.StartDate.HasValue && _packageModel.DurationDays.HasValue && _packageModel.DurationDays.Value > 0)
+        {
+            _packageModel.EndDate = _packageModel.StartDate.Value.AddDays(_packageModel.DurationDays.Value);
+        }
+    }
+
+    private void OnDurationChanged(int? duration)
+    {
+        _packageModel.DurationDays = duration;
+        if (_packageModel.StartDate.HasValue && _packageModel.DurationDays.HasValue && _packageModel.DurationDays.Value > 0)
+        {
+            _packageModel.EndDate = _packageModel.StartDate.Value.AddDays(_packageModel.DurationDays.Value);
+        }
+    }
+
+    private void OnEndDateChanged(DateTime? date)
+    {
+        _packageModel.EndDate = date;
+        if (_packageModel.StartDate.HasValue && _packageModel.EndDate.HasValue)
+        {
+            if (_packageModel.EndDate.Value >= _packageModel.StartDate.Value)
+            {
+                _packageModel.DurationDays = (_packageModel.EndDate.Value - _packageModel.StartDate.Value).Days;
+            }
+            else
+            {
+                _packageModel.DurationDays = 0;
+            }
+        }
+    }
+
+    private void Cancel() => Nav.NavigateTo("/travel-package");
+
+    private async Task Submit()
+    {
+        if (_form != null)
+        {
+            await _form.ValidateAsync();
+            if (!_form.IsValid) return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/travelpackage", _packageModel);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Travel package created successfully!", Severity.Success);
+                Nav.NavigateTo("/travel-package");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to create travel package: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

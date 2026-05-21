@@ -1,0 +1,79 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout Class="et-mud-layout">
+    <MudAppBar Elevation="0" Class="et-appbar" Fixed="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@(() => _drawerOpen = !_drawerOpen)"
+                       aria-label="Toggle navigation" />
+        <MudText Typo="Typo.h6" Class="et-appbar-title">
+            Easy<span style="color: #10B981;">Trip</span> Admin
+        </MudText>
+        <MudSpacer />
+        <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small" Class="mr-2">
+            Online
+        </MudChip>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2"
+               Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md"
+               Class="et-drawer">
+        @* <MudDrawerHeader Class="et-drawer-header">
+            <MudText Typo="Typo.h6" Style="font-weight: 800; color: #0F172A;">
+                Easy<span style="color: #10B981;">Trip</span>
+            </MudText>
+            <MudText Typo="Typo.caption" Style="color: #64748B;">Travel Console</MudText>
+        </MudDrawerHeader> *@
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="et-main-content pt-16">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#10B981",
+            Secondary = "#64748B",
+            Tertiary = "#4F46E5",
+            Background = "#F8FAFC",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#FFFFFF",
+            AppbarText = "#0F172A",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#1E293B",
+            DrawerIcon = "#64748B",
+            TextPrimary = "#0F172A",
+            TextSecondary = "#475569",
+            ActionDefault = "#64748B",
+            TableHover = "#F0FDF9",
+            TableStriped = "#F8FAFC",
+            Divider = "#E2E8F0"
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "12px"
+        }
+    };
+}

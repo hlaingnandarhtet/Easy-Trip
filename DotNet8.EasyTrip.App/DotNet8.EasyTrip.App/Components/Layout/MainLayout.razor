@@ -1,9 +1,34 @@
 @inherits LayoutComponentBase
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+
+@code {
+    private MudTheme _theme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#10B981", // Beautiful OripioFin Emerald Green
+            Secondary = "#64748B", // Elegant Slate
+            Tertiary = "#4F46E5", // Deep Indigo
+            Background = "#F8FAFC", // Page background
+            Surface = "#FFFFFF", // White Card background
+            AppbarBackground = "#FFFFFF",
+            AppbarText = "#0F172A",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#1E293B",
+            DrawerIcon = "#64748B",
+            TextPrimary = "#0F172A",
+            TextSecondary = "#475569",
+            ActionDefault = "#64748B",
+            TableHover = "#F8FAFC",
+            TableStriped = "#F8FAFC",
+            Divider = "#E2E8F0"
+        }
+    };
+}
 
 <div class="page">
     <div class="sidebar">

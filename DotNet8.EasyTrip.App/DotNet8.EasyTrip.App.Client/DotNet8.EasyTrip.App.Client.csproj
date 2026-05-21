@@ -18,4 +18,12 @@
     <ProjectReference Include="..\..\DotNet8.EasyTripBackendApi.Shared\DotNet8.EasyTripBackendApi.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\" />
+    <Folder Include="Pages\Bus\" />
+    <Folder Include="Pages\Hotel\" />
+    <Folder Include="Pages\HotelRoom\" />
+    <Folder Include="Pages\TravelPackage\" />
+  </ItemGroup>
+
 </Project>

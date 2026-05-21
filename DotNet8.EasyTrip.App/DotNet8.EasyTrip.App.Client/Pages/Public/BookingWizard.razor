@@ -1,0 +1,1046 @@
+@page "/booking/wizard"
+@layout DotNet8.EasyTrip.App.Client.Layout.PublicLayout
+@using MudBlazor
+@using DotNet8.EasyTripBackendApi.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6 mb-12">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center align-center py-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
+    }
+    else if (IsBookingConfirmed)
+    {
+        <MudPaper Class="pa-8 text-center mx-auto" Style="max-width: 500px;" Elevation="2">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 4rem;" Class="mb-3" />
+            <MudText Typo="Typo.h5" Class="font-weight-bold mb-2">Booking Confirmed!</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+                Your booking is placed. Details sent to <strong>@GuestEmail</strong>. 
+                Pending admin approval.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/my-bookings" Class="px-8">
+                View Bookings
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        @if (Type == "Hotel" && hotelResponseData != null)
+        {
+            <!-- Breadcrumbs -->
+            <div class="hotel-breadcrumbs">
+                <a href="/">Home</a>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Style="font-size: 0.8rem; margin: 0 4px;" />
+                <a href="/?tab=Hotel">Hotels</a>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Style="font-size: 0.8rem; margin: 0 4px;" />
+                <span style="color: #0f172a; font-weight: 500;">@hotelResponseData.HotelName</span>
+            </div>
+
+            <!-- Premium Photo Gallery Grid -->
+            <div class="hotel-gallery-container">
+                <div class="hotel-gallery-grid">
+                    <div class="gallery-item large" @onclick='() => OpenLightbox("Property")'>
+                        <img src="@hotelBuildingImages[0]" alt="Hotel Exterior" />
+                        <button class="btn-see-all-photos" type="button">
+                            <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Size="Size.Small" />
+                            <span>See all photos</span>
+                        </button>
+                    </div>
+                    <div class="gallery-item" @onclick='() => OpenLightbox("Rooms")'>
+                        <img src="@hotelRoomImages[0]" alt="Deluxe Room" />
+                        <button class="wishlist-btn" type="button" @onclick:stopPropagation @onclick="ToggleWishlist">
+                            <MudIcon Icon="@(isWishlisted ? Icons.Material.Filled.Favorite : Icons.Material.Filled.FavoriteBorder)" 
+                                     Color="@(isWishlisted ? Color.Error : Color.Default)" Size="Size.Small" />
+                        </button>
+                    </div>
+                    <div class="gallery-item" @onclick='() => OpenLightbox("Facilities")'>
+                        <img src="@hotelFacilityImages[0]" alt="Swimming Pool" />
+                    </div>
+                    <div class="gallery-item" @onclick='() => OpenLightbox("Facilities")'>
+                        <img src="@hotelFacilityImages[1]" alt="Lounge Area" />
+                    </div>
+                    <div class="gallery-item" @onclick='() => OpenLightbox("Guest")'>
+                        <img src="@hotelRoomImages[1]" alt="Guest View" />
+                        <div class="guest-photo-overlay">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Medium" Class="mb-1" />
+                            <span style="font-weight: 700; font-size: 0.95rem;">+24 Guest photos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sticky Tab Navigation Bar -->
+            <div class="hotel-nav-tabs-wrapper">
+                <div class="hotel-nav-tabs-container">
+                    <div class="hotel-nav-tabs">
+                        <a class="hotel-tab-link @(activeTab == "Overview" ? "active" : "")" @onclick='() => activeTab = "Overview"'>Overview</a>
+                        <a class="hotel-tab-link @(activeTab == "Rooms" ? "active" : "")" @onclick='() => activeTab = "Rooms"'>Rooms</a>
+                        <a class="hotel-tab-link @(activeTab == "Facilities" ? "active" : "")" @onclick='() => activeTab = "Facilities"'>Facilities</a>
+                        <a class="hotel-tab-link @(activeTab == "Reviews" ? "active" : "")" @onclick='() => activeTab = "Reviews"'>Reviews</a>
+                        <a class="hotel-tab-link @(activeTab == "Policies" ? "active" : "")" @onclick='() => activeTab = "Policies"'>Policies</a>
+                    </div>
+                    <div class="hotel-nav-deal">
+                        @if (hotelRooms.Any())
+                        {
+                            var lowestPrice = hotelRooms.Min(r => r.PricePerNight);
+                            <div class="hotel-nav-deal">
+                                <div class="price-label">
+                                    <span>rooms from</span>
+                                    <div class="price-value">@lowestPrice.ToString("N0") mmk</div>
+                                </div>
+                                <button class="btn-room-book" style="width: auto; padding: 8px 18px; font-size: 0.85rem;" type="button" @onclick='() => activeTab = "Rooms"'>
+                                    VIEW THIS DEAL
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Info & Reviews Card -->
+            <div class="hotel-header-grid mt-6">
+                <!-- Left Info Section -->
+                <div class="hotel-header-info">
+                    <div class="hotel-badges-row">
+                        <span class="hotel-tag hotel-tag-purple">VISIT MYANMAR 2026</span>
+                        <span class="hotel-tag hotel-tag-orange">Top Value</span>
+                        <span class="hotel-tag hotel-tag-red">Best seller</span>
+                        <span class="hotel-tag hotel-tag-gold">
+                            <MudIcon Icon="@Icons.Material.Filled.MilitaryTech" Size="Size.Small" Style="font-size: 1rem;" />
+                            2026
+                        </span>
+                    </div>
+
+                    <div class="d-flex align-center flex-wrap">
+                        <MudText Typo="Typo.h4" Style="font-weight: 850; color: #0f172a;">@hotelResponseData.HotelName</MudText>
+                        <div class="hotel-stars">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Filled.StarHalf" Size="Size.Small" />
+                        </div>
+                    </div>
+
+                    <div class="hotel-address-row mt-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="color: #64748b;" />
+                        <span>@hotelResponseData.Location, Myanmar</span>
+                        <span style="color: #cbd5e1;">|</span>
+                        <a class="map-link" @onclick='() => OpenLightbox("Property")'>SEE MAP</a>
+                    </div>
+                </div>
+
+                <!-- Right Review Card -->
+                <div class="review-dashboard-card">
+                    <div class="review-dashboard-header">
+                        <div>
+                            <span class="review-rating-label">8.9 Excellent</span>
+                            <span class="review-count-sub">53,745 reviews</span>
+                        </div>
+                        <div class="review-score-bubble">8.9</div>
+                    </div>
+                    <div class="review-subscores-grid">
+                        <div class="subscore-item">Location <span class="subscore-value">9.6</span></div>
+                        <div class="subscore-item">Cleanliness <span class="subscore-value">9.2</span></div>
+                        <div class="subscore-item">Value for money <span class="subscore-value">9.2</span></div>
+                        <div class="subscore-item">Service <span class="subscore-value">9.0</span></div>
+                    </div>
+                    <div class="review-read-all d-flex justify-space-between align-center">
+                        <a class="review-read-all" style="cursor:pointer;" @onclick='() => OpenLightbox("Guest")'>Read all reviews</a>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Primary" />
+                    </div>
+                    <div class="review-testimonial-bubble mt-3">
+                        "Above all, the excellent location was a huge advantage."
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sold Out Warning Banner -->
+            <div class="soldout-warning-banner mt-4">
+                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Medium" />
+                <span>Hurry up! 3 room types have already sold out for your dates!</span>
+            </div>
+
+            <!-- Rooms Section Header -->
+            <div class="d-flex justify-space-between align-center mb-4 mt-6" id="rooms-section">
+                <MudText Typo="Typo.h5" Style="font-weight: 800; color: #0f172a;">Available Room Types</MudText>
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Text">Select a room to checkout</MudChip>
+            </div>
+
+            <!-- Rooms Grid Layout -->
+            <div class="room-card-container">
+                @if (!hotelRooms.Any())
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="rounded-lg">No rooms available for this hotel currently.</MudAlert>
+                }
+                else
+                {
+                    @foreach (var room in hotelRooms)
+                    {
+                        var isSelected = SelectedRoomId == room.Id;
+                        
+                        // Dynamically determine room characteristics based on room name
+                        string rSize = "22 m² / 237 ft²";
+                        string rGuests = "Max 2 adults";
+                        string rBeds = "1 Double Bed";
+                        string rView = "City View";
+                        
+                        if (room.RoomTypeName != null)
+                        {
+                            if (room.RoomTypeName.Contains("Twin", StringComparison.OrdinalIgnoreCase))
+                            {
+                                rSize = "21 m² / 226 ft²";
+                                rGuests = "Max 2 adults";
+                                rBeds = "2 Single Beds";
+                                rView = "City View";
+                            }
+                            else if (room.RoomTypeName.Contains("Deluxe", StringComparison.OrdinalIgnoreCase) || 
+                                     room.RoomTypeName.Contains("Double", StringComparison.OrdinalIgnoreCase))
+                            {
+                                rSize = "28 m² / 301 ft²";
+                                rGuests = "Max 2 adults";
+                                rBeds = "1 Queen Bed";
+                                rView = "Skyline View";
+                            }
+                            else if (room.RoomTypeName.Contains("Family", StringComparison.OrdinalIgnoreCase))
+                            {
+                                rSize = "36 m² / 387 ft²";
+                                rGuests = "Max 4 adults";
+                                rBeds = "2 Double Beds";
+                                rView = "Pool/City View";
+                            }
+                            else if (room.RoomTypeName.Contains("Suite", StringComparison.OrdinalIgnoreCase))
+                            {
+                                rSize = "48 m² / 516 ft²";
+                                rGuests = "Max 2 adults (1 child)";
+                                rBeds = "1 King Bed";
+                                rView = "Panoramic City View";
+                            }
+                        }
+
+                        // Determine slide index for room-level slideshow
+                        int slideIdx = GetRoomImageIndex(room.Id);
+                        
+                        <div class="premium-room-card">
+                            <!-- Column 1: Gallery Carousel -->
+                            <div class="room-left-col">
+                                <div class="room-slider-wrapper">
+                                    <img class="room-slider-image" src="@hotelRoomImages[slideIdx]" alt="Room Image" />
+                                    <button class="room-slider-btn prev" type="button" @onclick="() => PrevRoomImage(room.Id)">
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowBackIos" Size="Size.Small" Style="margin-left: 6px; font-size: 0.9rem;" />
+                                    </button>
+                                    <button class="room-slider-btn next" type="button" @onclick="() => NextRoomImage(room.Id)">
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForwardIos" Size="Size.Small" Style="font-size: 0.9rem;" />
+                                    </button>
+                                    <div class="room-slider-counter">@(slideIdx + 1) / 8</div>
+                                </div>
+                                <a class="room-details-link" @onclick='() => OpenLightbox("Rooms")'>Room photos and details</a>
+                            </div>
+
+                            <!-- Column 2: Room Info Specs -->
+                            <div class="room-info-col">
+                                <div class="room-title-name">@room.RoomTypeName</div>
+                                <div class="room-spec-row">
+                                    <span class="room-spec-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.SquareFoot" Size="Size.Small" Style="font-size: 0.9rem;" />
+                                        @rSize
+                                    </span>
+                                    <span class="room-spec-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="font-size: 0.9rem;" />
+                                        @rGuests
+                                    </span>
+                                    <span class="room-spec-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.KingBed" Size="Size.Small" Style="font-size: 0.9rem;" />
+                                        @rBeds
+                                    </span>
+                                </div>
+
+                                <div class="room-rating-row">
+                                    <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Style="font-size: 0.85rem;" />
+                                    <span>9.1 Exceptional room comfort and quality</span>
+                                </div>
+
+                                <div class="room-amenity-list mt-2">
+                                    <span class="room-amenity-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                        Private bathroom & shower
+                                    </span>
+                                    <span class="room-amenity-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                        Hair dryer & toiletries
+                                    </span>
+                                    <span class="room-amenity-item">
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                        Air Conditioning & Soundproofing
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(room.Amenities))
+                                    {
+                                        @foreach (var amen in room.Amenities.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            <span class="room-amenity-item">
+                                                <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                                @amen.Trim()
+                                            </span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Column 3: Red Promo Banner / Perks -->
+                            <div class="room-deal-col">
+                                <div class="deal-header-red">Lowest price available!</div>
+                                <div class="deal-body-content">
+                                    <span class="deal-kid-badge">Your kid can stay for FREE!</span>
+                                    <div class="deal-perks-list">
+                                        <span class="deal-perk-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            Eco Deals applied
+                                        </span>
+                                        <span class="deal-perk-item primary-perk">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            Free entry to Infinity Pool
+                                        </span>
+                                        <span class="deal-perk-item primary-perk">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            Free gym & fitness access
+                                        </span>
+                                        <span class="deal-perk-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            Non-refundable (Special low price)
+                                        </span>
+                                        <span class="deal-perk-item">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            Free High-speed WiFi
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column 4: Pricing and Booking Controls -->
+                            <div class="room-price-col">
+                                @* <div class="original-price-cross">@((room.PricePerNight * 1.3m).ToString("N0")) mmk</div>
+                                <div class="coupon-discount-badge">Save 30% applied</div> *@
+                                <div class="actual-price-large">@room.PricePerNight.ToString("N0") mmk</div>
+                                <div class="price-night-sub">per night<br />with taxes included</div>
+                                
+                                <button class="btn-room-book @(isSelected ? "selected-room" : "")" type="button" @onclick="() => SelectHotelRoom(room.Id)">
+                                    @(isSelected ? "SELECTED" : "BOOK NOW")
+                                </button>
+                                <div class="room-book-caption">
+                                    <span>Only @room.AvailableRooms rooms left!</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Revealable checkout wizard section once a room is selected -->
+            @if (SelectedRoomId.HasValue && hotelData != null)
+            {
+                <div class="step-2-animation mt-8" id="checkout-form-section">
+                    <MudPaper Class="pa-6 border rounded-lg" Elevation="2" Style="background: #ffffff; border: 1px solid #e2e8f0;">
+                        <MudGrid Spacing="3">
+                            <!-- Left: Guest Details Form -->
+                            <MudItem xs="12" md="7">
+                                <div class="d-flex align-center mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.h6" Style="font-weight: 700;">Guest details and reservation options</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                                    Please supply accurate information. The booking voucher will be sent to the email provided.
+                                </MudText>
+
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="GuestName" Label="Full Name" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="GuestPhone" Label="Phone Number" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                                    </MudItem>
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="GuestEmail" Label="Email Address" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudDatePicker Date="TravelDateValue" DateChanged="OnTravelDateChanged" Label="Check-in Date" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudNumericField @bind-Value="Quantity" Label="Rooms Quantity" Min="1" Max="@hotelData.AvailableRooms" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudItem>
+
+                            <!-- Right: Order Summary -->
+                            <MudItem xs="12" md="5">
+                                <div class="pa-4 rounded-lg h-100" style="background-color: #fafafa; border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between;">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-4 border-b pb-2">Booking Summary</MudText>
+                                        
+                                        <div class="d-flex justify-space-between mb-2">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Hotel</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-bold text-right" Style="max-width: 180px;">@hotelResponseData.HotelName</MudText>
+                                        </div>
+                                        <div class="d-flex justify-space-between mb-2">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Room Type</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-bold text-right">@hotelData.RoomTypeName (x@Quantity)</MudText>
+                                        </div>
+                                        <div class="d-flex justify-space-between mb-2">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Check-in Date</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-bold">@(TravelDateValue?.ToString("dd-MM-yyyy") ?? "-")</MudText>
+                                        </div>
+                                        <div class="d-flex justify-space-between mb-2 border-b pb-2">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Rate per night</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-bold">@hotelData.PricePerNight.ToString("N0") mmk</MudText>
+                                        </div>
+
+                                        <div class="d-flex justify-space-between align-center my-4">
+                                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Total Amount</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">@TotalAmount.ToString("N0") mmk</MudText>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
+                                                   DisableElevation="true" Size="Size.Large" Class="py-3"
+                                                   OnClick="ConfirmBooking" 
+                                                   Disabled="@(!CanConfirm)">
+                                            @if (IsSubmitting)
+                                            {
+                                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                                <span class="ms-2">Processing Booking...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Confirm Booking</span>
+                                            }
+                                        </MudButton>
+                                        
+                                        @if (!CanConfirm && !IsSubmitting)
+                                        {
+                                            <MudText Typo="Typo.caption" Class="d-block text-center mt-2" Color="Color.Error">
+                                                Please complete all mandatory fields.
+                                            </MudText>
+                                        }
+                                    </div>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </div>
+            }
+
+            <!-- Immersive Lightroom Lightbox Modal -->
+            @if (isLightboxOpen)
+            {
+                <div class="lightbox-modal">
+                    <div class="lightbox-content-card">
+                        <!-- Modal Header -->
+                        <div class="lightbox-header">
+                            <div class="lightbox-title-tabs">
+                                <button class="lightbox-header-tab @(lightboxTab == "Property" ? "active" : "")" type="button" @onclick='() => lightboxTab = "Property"'>Property Images</button>
+                                <button class="lightbox-header-tab @(lightboxTab == "Guest" ? "active" : "")" type="button" @onclick='() => lightboxTab = "Guest"'>Guest Images</button>
+                            </div>
+                            <button class="btn-close-lightbox" type="button" @onclick="CloseLightbox">
+                                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
+                            </button>
+                        </div>
+
+                        @if (lightboxTab == "Property")
+                        {
+                            <!-- Category Filter Pills Bar -->
+                            <div class="lightbox-category-bar">
+                                <button class="lightbox-category-pill @(lightboxCategory == "All" ? "active" : "")" type="button" @onclick='() => lightboxCategory = "All"'>All (12)</button>
+                                <button class="lightbox-category-pill @(lightboxCategory == "Rooms" ? "active" : "")" type="button" @onclick='() => lightboxCategory = "Rooms"'>Rooms (8)</button>
+                                <button class="lightbox-category-pill @(lightboxCategory == "Facilities" ? "active" : "")" type="button" @onclick='() => lightboxCategory = "Facilities"'>Facilities (6)</button>
+                                <button class="lightbox-category-pill @(lightboxCategory == "Property" ? "active" : "")" type="button" @onclick='() => lightboxCategory = "Property"'>Property views (6)</button>
+                            </div>
+                        }
+
+                        <!-- Modal Split Content -->
+                        <div class="lightbox-body-grid">
+                            <!-- Left: Image grid of photos -->
+                            <div class="lightbox-photo-scroll">
+                                <div class="lightbox-photo-grid">
+                                    @{
+                                        List<string> activeImages = new();
+                                        if (lightboxTab == "Guest")
+                                        {
+                                            activeImages = guestImages;
+                                        }
+                                        else
+                                        {
+                                            if (lightboxCategory == "Rooms") activeImages = hotelRoomImages;
+                                            else if (lightboxCategory == "Facilities") activeImages = hotelFacilityImages;
+                                            else if (lightboxCategory == "Property") activeImages = hotelBuildingImages;
+                                            else
+                                            {
+                                                activeImages = hotelBuildingImages.Concat(hotelRoomImages).Concat(hotelFacilityImages).Take(12).ToList();
+                                            }
+                                        }
+                                        
+                                        @foreach (var imgUrl in activeImages)
+                                        {
+                                            <div class="lightbox-photo-item">
+                                                <img src="@imgUrl" alt="Lightbox Image" style="width:100%; height:100%; object-fit:cover;" />
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Right Sidebar: Ratings breakdowns & testimonial quotes -->
+                            <div class="lightbox-modal-sidebar">
+                                <div>
+                                    <div class="sidebar-rating-card">
+                                        <div class="review-score-bubble">8.9</div>
+                                        <div>
+                                            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display:block;">8.9 Excellent</span>
+                                            <span style="font-size: 0.75rem; color: #64748b;">Based on 53,745 reviews</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="sidebar-progress-title">Guest review metrics</div>
+                                    
+                                    <div class="sidebar-progress-row">
+                                        <div class="progress-label-row">
+                                            <span>Cleanliness</span>
+                                            <span style="font-weight:700;">9.2</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: 92%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="sidebar-progress-row">
+                                        <div class="progress-label-row">
+                                            <span>Facilities</span>
+                                            <span style="font-weight:700;">8.8</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: 88%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="sidebar-progress-row">
+                                        <div class="progress-label-row">
+                                            <span>Location</span>
+                                            <span style="font-weight:700;">9.6</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: 96%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="sidebar-progress-row">
+                                        <div class="progress-label-row">
+                                            <span>Service</span>
+                                            <span style="font-weight:700;">9.0</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: 90%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="sidebar-progress-row">
+                                        <div class="progress-label-row">
+                                            <span>Value for money</span>
+                                            <span style="font-weight:700;">9.2</span>
+                                        </div>
+                                        <div class="progress-bar-track">
+                                            <div class="progress-bar-fill" style="width: 92%;"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="sidebar-testimonial-title">What guests say</div>
+                                    <div class="sidebar-testimonial-carousel mt-2">
+                                        <div class="sidebar-testimonial-text">
+                                            @guestTestimonials[ItemId.HasValue ? (int)(ItemId.Value % guestTestimonials.Count) : 0]
+                                        </div>
+                                        <div class="sidebar-testimonial-author">- Verified Guest</div>
+                                    </div>
+                                </div>
+
+                                <button class="lightbox-sidebar-btn" type="button" @onclick="CloseLightbox">
+                                    See available rooms
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="d-flex justify-space-between align-center mb-6 border-b pb-3">
+                <div>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">Checkout</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Review details and complete your reservation.</MudText>
+                </div>
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">@Type Booking</MudChip>
+            </div>
+
+            <MudGrid Spacing="3">
+                <!-- Left Column: Options & Guest Info -->
+                <MudItem xs="12" md="7" lg="8">
+                    <!-- Section 1: Options -->
+                    <MudPaper Class="pa-4 mb-4" Elevation="1" Style="border: 1px solid #e0e0e0;">
+                        <div class="d-flex align-center mb-4">
+                            <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Primary" Class="mr-2" Size="Size.Small"/>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">1. Selection</MudText>
+                        </div>
+
+                        @if (Type == "Bus" && busData != null)
+                        {
+                            <div class="d-flex justify-space-between align-center p-3 mb-4 rounded" style="background-color: #f5f5f5;">
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@busData.BusName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@busData.StartPoint to @busData.EndPoint</MudText>
+                                </div>
+                                <div class="text-right">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="font-weight-bold">@PricePerSeat.ToString("N0") mmk</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">per seat</MudText>
+                                </div>
+                            </div>
+                            
+                            <div class="mx-auto" style="max-width: 400px;">
+                                <DotNet8.EasyTrip.App.Client.Pages.Public.SeatMap
+                                    @key="@($"{ItemId}-{TravelDateValue:yyyyMMdd}-{ReservedSeatsKey}")"
+                                    BusLayoutMetadata="@SelectedBusLayout"
+                                    TotalRows="10"
+                                    PricePerSeat="@PricePerSeat"
+                                    ReservedSeats="@ReservedSeats"
+                                    OnSeatsChanged="HandleSeatsSelected" />
+                            </div>
+                        }
+                        else if (Type == "Package" && packageData != null)
+                        {
+                            <div class="d-flex justify-space-between align-center p-3 mb-4 rounded" style="background-color: #f5f5f5;">
+                                <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@packageData.PackageName</MudText>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="font-weight-bold">@PricePerSeat.ToString("N0") mmk <span style="font-size:0.7rem; font-weight:normal; color:gray;">/ person</span></MudText>
+                            </div>
+                            
+                            <div style="max-width: 200px;">
+                                <MudNumericField @bind-Value="Quantity" Label="Headcount" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </div>
+                        }
+                    </MudPaper>
+
+                    <!-- Section 2: Guest Info -->
+                    <MudPaper Class="pa-4" Elevation="1" Style="border: 1px solid #e0e0e0;">
+                        <div class="d-flex align-center mb-4">
+                            <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Color="Color.Primary" Class="mr-2" Size="Size.Small"/>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">2. Guest Details</MudText>
+                        </div>
+                        
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="GuestName" Label="Full Name" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="GuestPhone" Label="Phone" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="GuestEmail" Label="Email" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem>
+                            @* <MudItem xs="12" sm="6">
+                                <MudDatePicker Date="TravelDateValue" DateChanged="OnTravelDateChanged" Label="Travel Date" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem> *@
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Right Column: Summary & Checkout -->
+                <MudItem xs="12" md="5" lg="4">
+                    <MudPaper Class="pa-4 position-sticky" Elevation="2" Style="top: 24px; border: 1px solid #e0e0e0; background-color: #fafafa;">
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-4 border-b pb-2">Order Summary</MudText>
+
+                        @if (Type == "Bus" && busData != null)
+                        {
+                            <div class="d-flex justify-space-between mb-2">
+                                <MudText Typo="Typo.body2">Bus Ticket</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@busData.BusName</MudText>
+                            </div>
+                            <div class="d-flex justify-space-between mb-2">
+                                <MudText Typo="Typo.body2">Seats (@SelectedSeats.Count)</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@(SelectedSeats.Any() ? string.Join(", ", SelectedSeats) : "-")</MudText>
+                            </div>
+                        }
+                        else if (Type == "Package" && packageData != null)
+                        {
+                            <div class="d-flex justify-space-between mb-2">
+                                <MudText Typo="Typo.body2">Package</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@packageData.PackageName</MudText>
+                            </div>
+                            <div class="d-flex justify-space-between mb-2">
+                                <MudText Typo="Typo.body2">Guests</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@Quantity</MudText>
+                            </div>
+                        }
+
+                        <div class="d-flex justify-space-between mb-3 border-b pb-3">
+                            <MudText Typo="Typo.body2">Date</MudText>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@(TravelDateValue?.ToString("dd-MM-yyyy") ?? "-")</MudText>
+                        </div>
+
+                        <div class="d-flex justify-space-between align-center mb-4">
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Total</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">@TotalAmount.ToString("N0") mmk</MudText>
+                        </div>
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
+                                   DisableElevation="true"
+                                   OnClick="ConfirmBooking" 
+                                   Disabled="@(!CanConfirm)">
+                            @if (IsSubmitting)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <span class="ms-2">Processing...</span>
+                            }
+                            else
+                            {
+                                <span>Confirm Booking</span>
+                            }
+                        </MudButton>
+                        
+                        @if (!CanConfirm && !IsSubmitting)
+                        {
+                            <MudText Typo="Typo.caption" Class="d-block text-center mt-2" Color="Color.Error">
+                                Complete selection and details to proceed.
+                            </MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+    }
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery(Name = "type")]
+    public string Type { get; set; } = "Bus";
+
+    [SupplyParameterFromQuery(Name = "id")]
+    public long? ItemId { get; set; }
+
+    private bool isLoading = true;
+    private bool IsSubmitting = false;
+    private bool IsBookingConfirmed = false;
+    private string? ErrorMessage;
+
+    private BusResponseModel? busData;
+    private HotelResponseModel? hotelResponseData;
+    private HotelRoomResponseModel? hotelData;
+    private List<HotelRoomResponseModel> hotelRooms = new();
+    private long? SelectedRoomId;
+    private TravelPackageResponseModel? packageData;
+
+    private string SelectedBusLayout = "Standard_2_2"; 
+    private List<string> SelectedSeats = new();
+    private List<string> ReservedSeats = new();
+    private int ReservedSeatsKey;
+    private decimal PricePerSeat = 0m;
+    private int Quantity = 1;
+
+    private decimal TotalAmount => Type == "Bus" 
+        ? SelectedSeats.Count * PricePerSeat 
+        : Quantity * PricePerSeat;
+
+    private void OnRoomSelected(long? roomId)
+    {
+        SelectedRoomId = roomId;
+        hotelData = roomId.HasValue
+            ? hotelRooms.FirstOrDefault(r => r.Id == roomId.Value)
+            : null;
+        PricePerSeat = hotelData?.PricePerNight ?? 0m;
+        Quantity = 1;
+    }
+
+    private string GuestName = "";
+    private string GuestPhone = "";
+    private string GuestEmail = "";
+    private DateTime? TravelDateValue = DateTime.Today.AddDays(1);
+
+    private bool IsSelectionValid => Type == "Bus" ? SelectedSeats.Count > 0 : (Type == "Hotel" ? SelectedRoomId != null : Quantity > 0);
+    
+    private bool IsGuestInfoValid()
+    {
+        return !string.IsNullOrWhiteSpace(GuestName) && 
+               !string.IsNullOrWhiteSpace(GuestPhone) && 
+               !string.IsNullOrWhiteSpace(GuestEmail) && 
+               GuestEmail.Contains("@") &&
+               TravelDateValue.HasValue;
+    }
+
+    private bool CanConfirm => IsGuestInfoValid() && IsSelectionValid && !IsSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (ItemId.HasValue)
+            {
+                if (Type == "Bus")
+                {
+                    busData = await Http.GetFromJsonAsync<BusResponseModel>($"api/bus/{ItemId}");
+                    if (busData != null)
+                    {
+                        if (!string.IsNullOrEmpty(busData.BusClass) && busData.BusClass.Contains("2+1"))
+                            SelectedBusLayout = "VIP_2_1";
+                        else
+                            SelectedBusLayout = "Standard_2_2";
+                        
+                        PricePerSeat = busData.Price ?? 0m;
+                        await LoadReservedSeatsAsync();
+                    }
+                    else
+                    {
+                        ErrorMessage = "Bus not found.";
+                    }
+                }
+                else if (Type == "Hotel")
+                {
+                    hotelResponseData = await Http.GetFromJsonAsync<HotelResponseModel>($"api/hotel/{ItemId}");
+                    if (hotelResponseData != null)
+                    {
+                        var rooms = await Http.GetFromJsonAsync<List<HotelRoomResponseModel>>($"api/hotel/{ItemId}/room");
+                        hotelRooms = rooms ?? new();
+                    }
+                    else
+                    {
+                        ErrorMessage = "Hotel not found.";
+                    }
+                }
+                else if (Type == "Package")
+                {
+                    packageData = await Http.GetFromJsonAsync<TravelPackageResponseModel>($"api/travelpackage/{ItemId}");
+                    if (packageData != null)
+                    {
+                        PricePerSeat = packageData.PackagePrice;
+                        if (packageData.StartDate != default)
+                        {
+                            TravelDateValue = packageData.StartDate;
+                        }
+                    }
+                    else
+                    {
+                        ErrorMessage = "Travel package not found.";
+                    }
+                }
+            }
+            else
+            {
+                ErrorMessage = "Invalid booking reference (Missing ID).";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Failed to load booking details from the server.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleSeatsSelected(List<string> seats)
+    {
+        SelectedSeats = seats;
+    }
+
+    private async Task OnTravelDateChanged(DateTime? date)
+    {
+        TravelDateValue = date;
+        await LoadReservedSeatsAsync();
+    }
+
+    private async Task LoadReservedSeatsAsync()
+    {
+        if (Type != "Bus" || !ItemId.HasValue || !TravelDateValue.HasValue)
+            return;
+
+        try
+        {
+            var travelDate = DateOnly.FromDateTime(TravelDateValue.Value);
+            var seats = await Http.GetFromJsonAsync<List<string>>(
+                $"api/bus/{ItemId}/reserved-seats?travelDate={travelDate:yyyy-MM-dd}");
+
+            ReservedSeats = seats ?? new();
+            ReservedSeatsKey++;
+
+            SelectedSeats = SelectedSeats
+                .Where(s => !ReservedSeats.Contains(s, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
+        catch
+        {
+            ReservedSeats = new();
+        }
+    }
+
+    // --- Premium Hotel Booking Custom Logic & Data Pools ---
+    private bool isWishlisted = false;
+    private bool isLightboxOpen = false;
+    private string lightboxTab = "Property";
+    private string lightboxCategory = "All";
+    private string activeTab = "Overview";
+    private Dictionary<long, int> roomImageIndices = new();
+
+    private void ToggleWishlist()
+    {
+        isWishlisted = !isWishlisted;
+        if (isWishlisted)
+            Snackbar.Add("Added hotel to your Wishlist!", Severity.Success);
+        else
+            Snackbar.Add("Removed hotel from your Wishlist.", Severity.Info);
+    }
+
+    private void OpenLightbox(string category = "All")
+    {
+        lightboxCategory = category;
+        lightboxTab = (category == "Guest") ? "Guest" : "Property";
+        isLightboxOpen = true;
+    }
+
+    private void CloseLightbox()
+    {
+        isLightboxOpen = false;
+    }
+
+    private int GetRoomImageIndex(long roomId)
+    {
+        if (!roomImageIndices.TryGetValue(roomId, out var index))
+        {
+            index = (int)(roomId % 8);
+            roomImageIndices[roomId] = index;
+        }
+        return index;
+    }
+
+    private void NextRoomImage(long roomId)
+    {
+        var current = GetRoomImageIndex(roomId);
+        roomImageIndices[roomId] = (current + 1) % 8;
+    }
+
+    private void PrevRoomImage(long roomId)
+    {
+        var current = GetRoomImageIndex(roomId);
+        roomImageIndices[roomId] = (current - 1 + 8) % 8;
+    }
+
+    private void SelectHotelRoom(long roomId)
+    {
+        OnRoomSelected(roomId);
+        Snackbar.Add($"Selected {hotelData?.RoomTypeName} (MMK {hotelData?.PricePerNight:N0}/night). Checkout details unlocked below!", Severity.Success);
+    }
+
+    private List<string> hotelBuildingImages = new()
+    {
+        "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=80"
+    };
+
+    private List<string> hotelRoomImages = new()
+    {
+        "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80"
+    };
+
+    private List<string> hotelFacilityImages = new()
+    {
+        "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1455587734955-081b22074882?auto=format&fit=crop&w=800&q=80"
+    };
+
+    private List<string> guestImages = new()
+    {
+        "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=80"
+    };
+
+    private List<string> guestTestimonials = new()
+    {
+        "\"The rooftop pool has incredible views of the city skyline. Cleanliness was outstanding, and the bed was extremely comfortable!\"",
+        "\"Convenient location near Bukit Bintang. Walking distance to malls and food streets. Perfect value for money!\"",
+        "\"The staff went above and beyond to accommodate our early check-in. Room service was fast and delicious!\"",
+        "\"Excellent gym and spa facilities. The room design is modern and clean. Would definitely stay here again.\""
+    };
+
+    private async Task ConfirmBooking()
+    {
+        IsSubmitting = true;
+        
+        var request = new PublicBookingRequestModel
+        {
+            Name = GuestName,
+            Phone = GuestPhone,
+            Email = GuestEmail,
+            BookingType = Type,
+            TravelDate = DateOnly.FromDateTime(TravelDateValue!.Value),
+            TotalAmount = TotalAmount,
+            Quantity = Type == "Bus" ? SelectedSeats.Count : Quantity
+        };
+
+        if (Type == "Bus")
+        {
+            request.BusId = ItemId;
+            request.SelectedSeats = string.Join(",", SelectedSeats);
+        }
+        else if (Type == "Hotel")
+        {
+            request.HotelRoomId = SelectedRoomId;
+        }
+        else if (Type == "Package")
+        {
+            request.PackageId = ItemId;
+        }
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/public/bookings", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                IsBookingConfirmed = true;
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Booking failed: {errorMsg}", Severity.Error);
+                if (Type == "Bus")
+                    await LoadReservedSeatsAsync();
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Network error while submitting booking.", Severity.Error);
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}

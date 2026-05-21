@@ -1,0 +1,136 @@
+@page "/room-type"
+@inherits ComponentBase
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Room Type Management"
+                Subtitle="Manage room categories and classes for hotel rooms."
+                Icon="@Icons.Material.Filled.MeetingRoom">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreatePage">
+                Add Room Type
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    <MudPaper Class="et-table-card" Elevation="0">
+        <div class="et-table-toolbar">
+            <div class="d-flex align-center gap-3 flex-wrap w-100">
+                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search room type..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="min-width: 260px; max-width: 420px; flex: 1;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                    Search
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable T="RoomTypeResponseModel" Items="_filteredList" Hover="true" Dense="false"
+                  Striped="false" Elevation="0" Class="et-data-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px;">No.</MudTh>
+                @* <MudTh Style="width: 150px;">Record ID</MudTh> *@
+                <MudTh>Room Type Name</MudTh>
+                <MudTh Style="text-align: right; width: 150px;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
+                <MudTd DataLabel="Room Type Name">
+                    <MudText Style="font-weight: 700; color: #0F172A;">@context.TypeName</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudTooltip Text="Edit Room Type">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="et-action-btn et-action-btn--edit"
+                                       OnClick="@(() => OpenEditPage(context))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Delete Room Type">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="et-action-btn et-action-btn--delete ml-1"
+                                       OnClick="@(() => OpenDeleteDialog(context.Id))" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="et-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Large" Style="opacity: 0.4;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No room types found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Try another search or register a room type.</MudText>
+                </div>
+            </NoRecordsContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<RoomTypeResponseModel> _roomTypesList = new();
+    private List<RoomTypeResponseModel> _filteredList = new();
+    private string _searchString = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtypes");
+            _roomTypesList = response ?? new();
+            PerformSearch();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading room types: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+        {
+            _filteredList = _roomTypesList;
+        }
+        else
+        {
+            _filteredList = _roomTypesList
+                .Where(rt => rt.TypeName != null && rt.TypeName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private int GetRowNumber(RoomTypeResponseModel context)
+    {
+        return _filteredList.IndexOf(context) + 1;
+    }
+
+    private void OpenCreatePage()
+    {
+        Nav.NavigateTo("/room-type/create");
+    }
+
+    private void OpenEditPage(RoomTypeResponseModel roomType)
+    {
+        Nav.NavigateTo($"/room-type/edit/{roomType.Id}");
+    }
+
+    private async Task OpenDeleteDialog(long id)
+    {
+        var parameters = new DialogParameters { ["RoomTypeId"] = id };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<RoomTypeDelete>("Confirm Delete", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+}

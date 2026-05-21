@@ -1,0 +1,360 @@
+@page "/my-bookings"
+@layout DotNet8.EasyTrip.App.Client.Layout.PublicLayout
+@using MudBlazor
+@using DotNet8.EasyTripBackendApi.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<style>
+    .my-bookings-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 60%, #eff6ff 100%);
+        padding-bottom: 60px;
+    }
+
+    .bookings-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #10b981 100%);
+        padding: 48px 0 36px;
+        margin-bottom: 0;
+    }
+
+    .booking-card-outer {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 8px 40px rgba(16,185,129,0.10), 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+        margin-top: -30px;
+    }
+
+    .booking-card-header {
+        background: linear-gradient(90deg, #f0fdf4 0%, #fff 100%);
+        padding: 24px 28px 16px;
+        border-bottom: 1.5px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .booking-table-wrap {
+        overflow-x: auto;
+    }
+
+    .inv-badge {
+        font-weight: 700;
+        color: #4f46e5;
+        font-size: 0.92rem;
+    }
+
+    .status-pill {
+        display: inline-block;
+        padding: 3px 14px;
+        border-radius: 99px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        letter-spacing: 0.02em;
+    }
+
+    .status-pending  { background: #fef3c7; color: #d97706; }
+    .status-confirmed{ background: #d1fae5; color: #059669; }
+    .status-rejected { background: #fee2e2; color: #dc2626; }
+
+    .type-chip-bus     { background: #dbeafe; color: #1d4ed8; }
+    .type-chip-hotel   { background: #fce7f3; color: #be185d; }
+    .type-chip-package { background: #ede9fe; color: #6d28d9; }
+
+    .type-chip {
+        display: inline-block;
+        padding: 3px 12px;
+        border-radius: 99px;
+        font-weight: 700;
+        font-size: 0.78rem;
+    }
+
+    .download-btn {
+        background: linear-gradient(90deg, #10b981, #059669);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 16px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: opacity 0.18s, box-shadow 0.18s;
+        text-decoration: none;
+    }
+
+    .download-btn:hover { opacity: 0.88; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+
+    .empty-bookings {
+        text-align: center;
+        padding: 56px 24px;
+    }
+
+    .login-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 8px 40px rgba(16,185,129,0.10);
+        padding: 48px 36px;
+        max-width: 460px;
+        margin: 0 auto;
+    }
+
+    .amount-cell { font-weight: 700; color: #0f172a; }
+</style>
+
+<div class="my-bookings-page">
+    <!-- Hero -->
+    <div class="bookings-hero">
+        <MudContainer MaxWidth="MaxWidth.Medium">
+            <MudText Typo="Typo.h4" Style="color:#fff; font-weight:800; margin-bottom:6px;">
+                📋 My Bookings
+            </MudText>
+            <MudText Typo="Typo.body1" Style="color:rgba(255,255,255,0.75);">
+                View your booking history and download invoices for confirmed bookings
+            </MudText>
+        </MudContainer>
+    </div>
+
+    <MudContainer MaxWidth="MaxWidth.Large" Class="pt-6">
+        @if (!_isAuthenticated)
+        {
+            <!-- Login Card -->
+            <div class="login-card">
+                <div style="text-align:center; margin-bottom:28px;">
+                    <div style="font-size:3rem; margin-bottom:12px;">📱</div>
+                    <MudText Typo="Typo.h5" Style="font-weight:800; color:#0f172a; margin-bottom:6px;">Look Up Your Bookings</MudText>
+                    <MudText Typo="Typo.body2" Style="color:#64748b;">Enter the phone number you used when booking to see your tickets and invoices.</MudText>
+                </div>
+
+                <MudTextField @bind-Value="_phoneInput"
+                              Label="Phone Number"
+                              Placeholder="e.g. 09765452645"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Phone"
+                              AdornmentColor="Color.Primary"
+                              Class="mb-4"
+                              OnKeyDown="HandleEnterKey" />
+
+                @if (_errorMessage != null)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
+                }
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           FullWidth="true"
+                           OnClick="LookupBookings"
+                           Disabled="@(_loading || string.IsNullOrWhiteSpace(_phoneInput))"
+                           Style="border-radius:12px; font-weight:800; font-size:1rem;">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    View My Bookings
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            <!-- Welcome + Change Number -->
+            <div class="d-flex justify-space-between align-center mb-4 flex-wrap gap-2">
+                <div>
+                    <MudText Typo="Typo.h5" Style="font-weight:800; color:#0f172a;">
+                        Welcome, <span style="color:#10b981;">@_phoneInput</span>!
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color:#64748b;">
+                        @_bookings.Count booking@(_bookings.Count != 1 ? "s" : "") found
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           OnClick="Logout"
+                           StartIcon="@Icons.Material.Filled.Logout"
+                           Style="border-radius:10px;">
+                    Back
+                </MudButton>
+            </div>
+
+            <div class="booking-card-outer">
+                <div class="booking-card-header">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Style="font-weight:800; color:#0f172a;">Ticket Invoices &amp; History</MudText>
+                </div>
+
+                @if (_loading)
+                {
+                    <div class="d-flex justify-center py-12">
+                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+                    </div>
+                }
+                else if (!_bookings.Any())
+                {
+                    <div class="empty-bookings">
+                        <div style="font-size:3.5rem; margin-bottom:16px;">🎫</div>
+                        <MudText Typo="Typo.h6" Style="font-weight:800; color:#0f172a; margin-bottom:8px;">No Bookings Found</MudText>
+                        <MudText Typo="Typo.body2" Style="color:#64748b;">No bookings were found for this phone number. Try a different number or make a new booking.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="booking-table-wrap">
+                        <MudTable Items="@_bookings" Hover="true" Dense="true" Elevation="0" Breakpoint="Breakpoint.Sm">
+                            <HeaderContent>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">INVOICE ID</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">TYPE</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">ITEM</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">TRAVEL DATE</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">AMOUNT</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">PAYMENT</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">STATUS</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem; text-align:right;">INVOICE</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Invoice ID">
+                                    <span class="inv-badge">#INV-@context.Id.ToString("D5")</span>
+                                </MudTd>
+                                <MudTd DataLabel="Type">
+                                    <span class="type-chip @GetTypeChipClass(context.BookingType)">@context.BookingType</span>
+                                </MudTd>
+                                <MudTd DataLabel="Item">
+                                    <span style="font-size:0.85rem; color:#334155;">@GetItemDescription(context)</span>
+                                </MudTd>
+                                <MudTd DataLabel="Travel Date">
+                                    <span style="font-size:0.85rem;">@context.TravelDate.ToString("dd-MM-yyyy")</span>
+                                </MudTd>
+                                <MudTd DataLabel="Amount">
+                                    <span class="amount-cell">@context.TotalAmount.ToString("N0") mmk</span>
+                                </MudTd>
+                                <MudTd DataLabel="Payment">
+                                    @if (context.PaymentStatus == PaymentStatus.Paid)
+                                    {
+                                        <span style="color:#059669; font-weight:700; font-size:0.85rem;">✓ Paid</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#d97706; font-weight:700; font-size:0.85rem;">⏳ Unpaid</span>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Status">
+                                    <span class="status-pill @GetStatusPillClass(context.BookingStatusCode)">
+                                        @GetStatusLabel(context.BookingStatusCode)
+                                    </span>
+                                </MudTd>
+                                <MudTd DataLabel="Invoice" Style="text-align:right;">
+                                    @if (context.BookingStatusCode == 2) // Confirmed
+                                    {
+                                        <button class="download-btn" @onclick="() => DownloadInvoice(context)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            Download
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#cbd5e1; font-size:0.82rem;">—</span>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager />
+                            </PagerContent>
+                        </MudTable>
+                    </div>
+                }
+            </div>
+        }
+    </MudContainer>
+</div>
+
+@code {
+    private bool _isAuthenticated = false;
+    private bool _loading = false;
+    private string _phoneInput = "";
+    private string? _errorMessage;
+    private List<BookingResponseModel> _bookings = new();
+
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LookupBookings();
+    }
+
+    private async Task LookupBookings()
+    {
+        if (string.IsNullOrWhiteSpace(_phoneInput)) return;
+
+        _loading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<BookingResponseModel>>(
+                $"api/public/bookings/by-phone/{Uri.EscapeDataString(_phoneInput.Trim())}");
+
+            _bookings = result ?? new();
+            _isAuthenticated = true;
+
+            if (_bookings.Count == 0)
+                _errorMessage = null; // Will show empty state instead
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Could not load bookings. Please try again. ({ex.Message})";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Logout()
+    {
+        _isAuthenticated = false;
+        _phoneInput = "";
+        _bookings.Clear();
+        _errorMessage = null;
+    }
+
+    private string GetItemDescription(BookingResponseModel b)
+    {
+        if (b.Details == null) return b.ItemName ?? "—";
+
+        return b.BookingType switch
+        {
+            "Bus" => $"{b.Details.BusName ?? b.Details.BusNumber ?? "—"}" +
+                     (string.IsNullOrEmpty(b.Details.SelectedSeats) ? "" : $" (Seats: {b.Details.SelectedSeats})"),
+            "Hotel" => $"{b.Details.HotelName ?? "—"} — {b.Details.HotelRoomTypeName ?? "Room"}" +
+                       $" × {b.Details.Quantity}",
+            _ => $"{b.Details.PackageName ?? b.ItemName ?? "—"}"
+        };
+    }
+
+    private string GetTypeChipClass(string type) => type switch
+    {
+        "Bus"     => "type-chip-bus",
+        "Hotel"   => "type-chip-hotel",
+        "Package" => "type-chip-package",
+        _         => ""
+    };
+
+    private string GetStatusPillClass(int code) => code switch
+    {
+        1 => "status-pending",
+        2 => "status-confirmed",
+        3 => "status-rejected",
+        _ => "status-pending"
+    };
+
+    private string GetStatusLabel(int code) => code switch
+    {
+        1 => "Pending",
+        2 => "Confirmed",
+        3 => "Rejected",
+        _ => "Unknown"
+    };
+
+}

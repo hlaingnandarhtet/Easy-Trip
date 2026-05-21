@@ -1,0 +1,91 @@
+@page "/hotel"
+@inherits ComponentBase
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Hotel Management"
+                Subtitle="Manage partner hotels, room inventory, and locations."
+                Icon="@Icons.Material.Filled.Hotel">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                Add New Hotel
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    <MudPaper Class="et-table-card" Elevation="0">
+        <div class="et-table-toolbar">
+            <div class="d-flex align-center gap-3 flex-wrap w-100">
+                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search hotel or location..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="min-width: 260px; max-width: 420px; flex: 1;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                    Search
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable T="HotelResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
+                  Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px;">No.</MudTh>
+                @* <MudTh>Record ID</MudTh> *@
+                <MudTh>Hotel Name</MudTh>
+                <MudTh>Location</MudTh>
+                <MudTh>Rooms</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
+                <MudTd DataLabel="Hotel Name">
+                    <MudText Style="font-weight: 700; color: #0F172A;">@context.HotelName</MudText>
+                </MudTd>
+                <MudTd DataLabel="Location">
+                    <div class="d-flex align-center gap-1">
+                        <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="color: #94A3B8;" />
+                        <span style="color: #64748B;">@context.Location</span>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Rooms">
+                    <span class="et-badge et-badge--indigo">@context.HotelRooms.Count rooms</span>
+                </MudTd>
+                <MudTd DataLabel="Created" Style="color: #64748B;">@context.CreatedAt?.ToString("dd-MM-yyyy")</MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudTooltip Text="Manage Rooms">
+                        <MudIconButton Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small" Class="et-action-btn et-action-btn--info"
+                                       Href="@($"/hotel-room/{context.Id}")" />
+                    </MudTooltip>
+                    <MudTooltip Text="Edit Hotel">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="et-action-btn et-action-btn--edit ml-1"
+                                       OnClick="@(() => OpenEditDialog(context))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Delete Hotel">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="et-action-btn et-action-btn--delete ml-1"
+                                       OnClick="@(() => OpenDeleteDialog(context.Id))" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="et-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Hotel" Size="Size.Large" Style="opacity: 0.4;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No hotels found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Try another search or register a hotel.</MudText>
+                </div>
+            </NoRecordsContent>
+            <LoadingContent>
+                <div class="pa-6 d-flex align-center gap-3">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                    <MudText>Loading hotels...</MudText>
+                </div>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager InfoFormat="{first_item}-{last_item} of {all_items}" HorizontalAlignment="HorizontalAlignment.Right" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>

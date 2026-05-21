@@ -1,0 +1,769 @@
+@page "/booking/create"
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-12">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <div>
+            <MudText Typo="Typo.h4" Style="font-weight: 800; color: #0F172A; letter-spacing: -0.02em;">Create New Booking</MudText>
+            <MudText Typo="Typo.body1" Style="color: #64748B; font-weight: 500;">
+                Streamlined SaaS portal to manage bus seat allocations, hotel reservations, and custom travel packages.
+            </MudText>
+        </div>
+    </div>
+
+    <MudGrid>
+        <!-- Main Booking Form (Left Column) -->
+        <MudItem xs="12" lg="8">
+            <MudCard Elevation="0" Class="rounded-xl border border-solid p-6 mud-card-glass" Style="border-color: #E2E8F0; background-color: #FFFFFF;">
+                <MudCardContent>
+                    <MudForm @ref="_form" @bind-IsValid="_success">
+                        <MudGrid>
+                            <!-- Step 1: Customer Details -->
+                            <MudItem xs="12">
+                                <div class="section-header mb-4">
+                                    <span class="step-badge">1</span>
+                                    <MudText Typo="Typo.h6" Class="section-title">Customer Information</MudText>
+                                </div>
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="4">
+                                <MudTextField T="string" Label="Customer Full Name" Required="true" RequiredError="Full Name is required" 
+                                              @bind-Value="_bookingModel.CustomerName" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudTextField T="string" Label="Email Address" Required="true" RequiredError="Email is required" 
+                                              Validation="@(new EmailAddressAttribute {ErrorMessage = "Invalid Email Address"})"
+                                              @bind-Value="_bookingModel.CustomerEmail" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudTextField T="string" Label="Phone Number" Required="true" RequiredError="Phone number is required"
+                                              @bind-Value="_bookingModel.CustomerPhone" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone" />
+                            </MudItem>
+
+                            <!-- Step 2: Booking Type Selector -->
+                            <MudItem xs="12" Class="mt-4">
+                                <div class="section-header mb-4">
+                                    <span class="step-badge">2</span>
+                                    <MudText Typo="Typo.h6" Class="section-title">Service Details</MudText>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="string" Label="Select Booking Type" Required="true" 
+                                           Value="_bookingModel.BookingType" ValueChanged="OnBookingTypeChanged" 
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" AdornmentColor="Color.Primary" AdornmentIcon="@Icons.Material.Filled.Category">
+                                    <MudSelectItem Value="@("Bus")">🚌 Bus Transportation</MudSelectItem>
+                                    <MudSelectItem Value="@("Hotel")">🏨 Hotel Accommodation</MudSelectItem>
+                                    <MudSelectItem Value="@("Package")">🎒 Tour & Travel Package</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+
+                            <!-- DYNAMIC DOCK SECTION FOR BUS -->
+                            @if (_bookingModel.BookingType == "Bus")
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudSelect T="BusMock" Label="Select Bus Route / Type" Required="true"
+                                               Value="_selectedBus" ValueChanged="OnBusSelectionChanged"
+                                               Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" AdornmentIcon="@Icons.Material.Filled.DirectionsBus">
+                                        @foreach (var bus in _mockBuses)
+                                        {
+                                            <MudSelectItem Value="bus">@bus.BusName (@bus.LayoutDisplay - @bus.Price.ToString("N0") mmk)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+
+                                @if (_selectedBus != null)
+                                {
+                                    <!-- Dynamic seat selection layout -->
+                                    <MudItem xs="12" Class="mt-4">
+                                        <MudDivider Class="my-4" />
+                                        <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: #0F172A;">Interactive Seat Map</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Select one or more seats below. Aisle gaps configured dynamically based on layout: <b>@_selectedBus.SeatLayoutType</b>.</MudText>
+                                            </div>
+                                            <div class="d-flex align-center gap-3">
+                                                <div class="legend-item"><span class="legend-color available"></span>Available</div>
+                                                <div class="legend-item"><span class="legend-color selected"></span>Selected</div>
+                                                <div class="legend-item"><span class="legend-color reserved"></span>Reserved</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="bus-container py-6 px-4 rounded-xl d-flex flex-column align-center">
+                                            <!-- Driver/Front Indicator -->
+                                            <div class="bus-front mb-6 w-100 d-flex justify-space-between align-center px-6">
+                                                <div class="d-flex align-center gap-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.AirlineSeatReclineExtra" Color="Color.Secondary" />
+                                                    <span class="text-xs font-semibold text-slate-500">DRIVER CABIN</span>
+                                                </div>
+                                                <div class="steering-wheel">⚙️</div>
+                                            </div>
+
+                                            <!-- Seat grid -->
+                                            <div class="d-flex flex-column gap-3 w-100" style="max-width: 480px;">
+                                                @foreach (var row in _seatRows)
+                                                {
+                                                    <div class="d-flex justify-center align-center gap-3">
+                                                        @foreach (var seat in row)
+                                                        {
+                                                            @if (seat == null)
+                                                            {
+                                                                <!-- Aisle spacer -->
+                                                                <div class="aisle-spacer"></div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button type="button" 
+                                                                        disabled="@seat.IsReserved"
+                                                                        class="seat-btn @(seat.IsReserved ? "reserved" : seat.IsSelected ? "selected" : "available")"
+                                                                        @onclick="() => ToggleSeatSelection(seat)">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.EventSeat" Class="seat-icon" Size="Size.Small" />
+                                                                    <span class="seat-num">@seat.Label</span>
+                                                                </button>
+                                                            }
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </MudItem>
+                                }
+                            }
+
+                            <!-- DYNAMIC DOCK SECTION FOR HOTEL -->
+                            @if (_bookingModel.BookingType == "Hotel")
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudSelect T="HotelMock" Label="Select Hotel" Required="true"
+                                               Value="_selectedHotel" ValueChanged="OnHotelSelectionChanged"
+                                               Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" AdornmentIcon="@Icons.Material.Filled.Hotel">
+                                        @foreach (var hotel in _mockHotels)
+                                        {
+                                            <MudSelectItem Value="hotel">@hotel.HotelName (@hotel.PricePerNight.ToString("N0") mmk / night)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+
+                                <MudItem xs="12" md="4" Class="mt-2">
+                                    <MudDatePicker Label="Check-In Date" Required="true" Date="_bookingModel.CheckInDate" DateChanged="OnCheckInDateChanged"
+                                                   Placeholder="Select Check-In Date" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                                                   MinDate="DateTime.Today" />
+                                </MudItem>
+                                <MudItem xs="12" md="4" Class="mt-2">
+                                    <MudDatePicker Label="Check-Out Date" Required="true" Date="_bookingModel.CheckOutDate" DateChanged="OnCheckOutDateChanged"
+                                                   Placeholder="Select Check-Out Date" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                   MinDate="_bookingModel.CheckInDate?.AddDays(1) ?? DateTime.Today.AddDays(1)" />
+                                </MudItem>
+                                <MudItem xs="12" md="4" Class="mt-2">
+                                    <MudNumericField T="int" Label="Number of Rooms" Required="true" Value="_bookingModel.RoomCount" ValueChanged="OnRoomCountChanged"
+                                                     Min="1" Max="10" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                            }
+
+                            <!-- DYNAMIC DOCK SECTION FOR PACKAGE -->
+                            @if (_bookingModel.BookingType == "Package")
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudSelect T="PackageMock" Label="Select Travel Package" Required="true"
+                                               Value="_selectedPackage" ValueChanged="OnPackageSelectionChanged"
+                                               Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" AdornmentIcon="@Icons.Material.Filled.Landscape">
+                                        @foreach (var pkg in _mockPackages)
+                                        {
+                                            <MudSelectItem Value="pkg">@pkg.PackageName (@pkg.PricePerPerson.ToString("N0") mmk / person)</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudNumericField T="int" Label="Number of Travelers" Required="true" Value="_bookingModel.TravelerCount" ValueChanged="OnTravelerCountChanged"
+                                                     Min="1" Max="20" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.People" />
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudForm>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Right Checkout Sidebar (Dynamic Price & Summary) -->
+        <MudItem xs="12" lg="4">
+            <MudCard Elevation="0" Class="rounded-xl border border-solid p-6 checkout-card" Style="border-color: #E2E8F0; background-color: #F8FAFC; position: sticky; top: 24px;">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Style="font-weight: 800; color: #0F172A; letter-spacing: -0.01em;">Booking Summary</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Real-time price calculations & order preview.</MudText>
+                    
+                    <MudDivider Class="my-4" />
+
+                    <!-- Summary details based on type -->
+                    <div class="d-flex flex-column gap-3 mb-6">
+                        @if (!string.IsNullOrEmpty(_bookingModel.CustomerName))
+                        {
+                            <div class="summary-line">
+                                <span class="summary-label">Customer</span>
+                                <span class="summary-val font-semibold">@_bookingModel.CustomerName</span>
+                            </div>
+                        }
+
+                        <div class="summary-line">
+                            <span class="summary-label">Booking Type</span>
+                            <span class="summary-val text-primary font-semibold">@(_bookingModel.BookingType ?? "Not Selected")</span>
+                        </div>
+
+                        @if (_bookingModel.BookingType == "Bus" && _selectedBus != null)
+                        {
+                            <div class="summary-line">
+                                <span class="summary-label">Route</span>
+                                <span class="summary-val">@_selectedBus.BusName</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Layout</span>
+                                <span class="summary-val">@_selectedBus.LayoutDisplay</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Ticket Rate</span>
+                                <span class="summary-val">@_selectedBus.Price.ToString("N0") mmk</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Seats Selected</span>
+                                <span class="summary-val font-semibold text-primary">
+                                    @(SelectedSeatsList.Any() ? string.Join(", ", SelectedSeatsList) : "None")
+                                </span>
+                            </div>
+                        }
+
+                        @if (_bookingModel.BookingType == "Hotel" && _selectedHotel != null)
+                        {
+                            <div class="summary-line">
+                                <span class="summary-label">Hotel</span>
+                                <span class="summary-val">@_selectedHotel.HotelName</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Rate / Night</span>
+                                <span class="summary-val">@_selectedHotel.PricePerNight.ToString("N0") mmk</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Rooms Selected</span>
+                                <span class="summary-val font-semibold">@_bookingModel.RoomCount Room(s)</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Total Nights</span>
+                                <span class="summary-val font-semibold">@TotalNights Night(s)</span>
+                            </div>
+                        }
+
+                        @if (_bookingModel.BookingType == "Package" && _selectedPackage != null)
+                        {
+                            <div class="summary-line">
+                                <span class="summary-label">Destination</span>
+                                <span class="summary-val font-semibold">@_selectedPackage.PackageName</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Rate / Person</span>
+                                <span class="summary-val">@_selectedPackage.PricePerPerson.ToString("N0") mmk</span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="summary-label">Travelers</span>
+                                <span class="summary-val font-semibold">@_bookingModel.TravelerCount Person(s)</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Price Preview Badge -->
+                    <div class="price-badge p-4 rounded-xl d-flex flex-column align-center mb-6">
+                        <span class="price-label">TOTAL AMOUNT DUE</span>
+                        <span class="price-value">@TotalPrice.ToString("N0") mmk</span>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" 
+                               Disabled="@(!IsFormSubmittable())" OnClick="SubmitBooking"
+                               Style="text-transform: none; border-radius: 12px; font-weight: 700; height: 50px;">
+                        Confirm and Book Now
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .mud-card-glass {
+        border-radius: 16px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    }
+    
+    .checkout-card {
+        border-radius: 16px;
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .step-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: #EFF6FF;
+        color: #2563EB;
+        font-weight: 700;
+        font-size: 14px;
+        border: 1px solid #DBEAFE;
+    }
+
+    .section-title {
+        font-weight: 700;
+        color: #0F172A;
+        font-size: 1.1rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748B;
+    }
+
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+    }
+    .legend-color.available {
+        border: 1.5px solid #CBD5E1;
+        background-color: #FFFFFF;
+    }
+    .legend-color.selected {
+        background-color: #2563EB;
+    }
+    .legend-color.reserved {
+        background-color: #E2E8F0;
+    }
+
+    /* Seat map styling */
+    .bus-container {
+        background-color: #F8FAFC;
+        border: 2px solid #E2E8F0;
+        border-radius: 20px;
+        box-shadow: inset 0 2px 8px rgba(148, 163, 184, 0.08);
+        position: relative;
+    }
+    
+    .bus-front {
+        border-bottom: 2px dashed #CBD5E1;
+        padding-bottom: 12px;
+    }
+    
+    .steering-wheel {
+        font-size: 20px;
+        animation: et-spin 10s linear infinite;
+    }
+
+    .aisle-spacer {
+        width: 32px;
+        height: 38px;
+    }
+
+    .seat-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 2px;
+    }
+
+    .seat-btn.available {
+        background-color: #FFFFFF;
+        border: 1.5px solid #CBD5E1;
+        color: #64748B;
+    }
+    .seat-btn.available:hover {
+        border-color: #2563EB;
+        color: #2563EB;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+
+    .seat-btn.selected {
+        background-color: #2563EB;
+        border: 1.5px solid #2563EB;
+        color: #FFFFFF;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .seat-btn.reserved {
+        background-color: #E2E8F0;
+        border: 1.5px solid #E2E8F0;
+        color: #94A3B8;
+        cursor: not-allowed;
+    }
+
+    .seat-icon {
+        font-size: 14px !important;
+    }
+
+    .seat-num {
+        font-size: 9px;
+        font-weight: 700;
+        margin-top: -2px;
+    }
+
+    .summary-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+    }
+    
+    .summary-label {
+        color: #64748B;
+        font-weight: 500;
+    }
+
+    .summary-val {
+        color: #1E293B;
+    }
+
+    .price-badge {
+        background: linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%);
+        color: #FFFFFF;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+    }
+    
+    .price-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: #93C5FD;
+    }
+
+    .price-value {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+</style>
+
+@code {
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private NavigationManager Nav { get; set; } = null!;
+
+    private bool _success = false;
+    private MudForm? _form;
+    private BookingFormModel _bookingModel = new();
+    private decimal TotalPrice { get; set; } = 0;
+
+    // Selected DTO holders
+    private BusMock? _selectedBus;
+    private HotelMock? _selectedHotel;
+    private PackageMock? _selectedPackage;
+
+    // Bus Seat state
+    private List<List<BusSeat?>> _seatRows = new();
+    private List<int> SelectedSeatsList { get; set; } = new();
+
+    // Hotel Helpers
+    private int TotalNights => (_bookingModel.CheckInDate.HasValue && _bookingModel.CheckOutDate.HasValue) 
+        ? (_bookingModel.CheckOutDate.Value - _bookingModel.CheckInDate.Value).Days 
+        : 0;
+
+    // Booking Model class definition for local component state
+    public class BookingFormModel
+    {
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
+        public string? CustomerPhone { get; set; }
+        public string BookingType { get; set; } = "Bus";
+
+        // Hotel fields
+        public DateTime? CheckInDate { get; set; } = DateTime.Today;
+        public DateTime? CheckOutDate { get; set; } = DateTime.Today.AddDays(1);
+        public int RoomCount { get; set; } = 1;
+
+        // Package fields
+        public int TravelerCount { get; set; } = 1;
+    }
+
+    // Bus Seat Class
+    public class BusSeat
+    {
+        public int Number { get; set; }
+        public string Label { get; set; } = "";
+        public bool IsSelected { get; set; }
+        public bool IsReserved { get; set; }
+    }
+
+    // Mock Models for Dropdowns
+    public class BusMock
+    {
+        public string BusName { get; set; } = "";
+        public string SeatLayoutType { get; set; } = ""; // "VIP_2_1", "Standard_2_2", "Sleeper_1_1"
+        public int TotalSeats { get; set; }
+        public decimal Price { get; set; }
+        public string LayoutDisplay => SeatLayoutType switch
+        {
+            "Standard_2_2" => "Standard 2x2 Class",
+            "VIP_2_1" => "VIP 2x1 Class",
+            "Sleeper_1_1" => "Luxury Sleeper 1x1",
+            _ => "Regular Class"
+        };
+    }
+
+    public class HotelMock
+    {
+        public string HotelName { get; set; } = "";
+        public decimal PricePerNight { get; set; }
+    }
+
+    public class PackageMock
+    {
+        public string PackageName { get; set; } = "";
+        public decimal PricePerPerson { get; set; }
+    }
+
+    // Mock Databases
+    private readonly List<BusMock> _mockBuses = new()
+    {
+        new BusMock { BusName = "Royal Express Alpha", SeatLayoutType = "Standard_2_2", TotalSeats = 40, Price = 25.00m },
+        new BusMock { BusName = "Vip Cruiser Horizon", SeatLayoutType = "VIP_2_1", TotalSeats = 30, Price = 45.00m },
+        new BusMock { BusName = "Luxury Sleeper Monarch", SeatLayoutType = "Sleeper_1_1", TotalSeats = 20, Price = 65.00m }
+    };
+
+    private readonly List<HotelMock> _mockHotels = new()
+    {
+        new HotelMock { HotelName = "The Grand Horizon Resort", PricePerNight = 120.00m },
+        new HotelMock { HotelName = "Marina Heights Suites", PricePerNight = 85.00m },
+        new HotelMock { HotelName = "Breezy Palms Villa", PricePerNight = 150.00m }
+    };
+
+    private readonly List<PackageMock> _mockPackages = new()
+    {
+        new PackageMock { PackageName = "Bali Romantic Escape (5 Days)", PricePerPerson = 499.00m },
+        new PackageMock { PackageName = "Swiss Alps Adventure (7 Days)", PricePerPerson = 1250.00m },
+        new PackageMock { PackageName = "Tokyo Neon Highlights (4 Days)", PricePerPerson = 650.00m }
+    };
+
+    protected override void OnInitialized()
+    {
+        // Set default values
+        _selectedBus = _mockBuses.First();
+        _selectedHotel = _mockHotels.First();
+        _selectedPackage = _mockPackages.First();
+        
+        GenerateSeatLayout();
+        CalculatePrice();
+    }
+
+    private void OnBookingTypeChanged(string value)
+    {
+        _bookingModel.BookingType = value;
+        
+        // Reset selections
+        SelectedSeatsList.Clear();
+        if (_bookingModel.BookingType == "Bus")
+        {
+            GenerateSeatLayout();
+        }
+        
+        CalculatePrice();
+    }
+
+    private void OnBusSelectionChanged(BusMock bus)
+    {
+        _selectedBus = bus;
+        GenerateSeatLayout();
+        CalculatePrice();
+    }
+
+    private void OnHotelSelectionChanged(HotelMock hotel)
+    {
+        _selectedHotel = hotel;
+        CalculatePrice();
+    }
+
+    private void OnPackageSelectionChanged(PackageMock pkg)
+    {
+        _selectedPackage = pkg;
+        CalculatePrice();
+    }
+
+    private void OnCheckInDateChanged(DateTime? date)
+    {
+        _bookingModel.CheckInDate = date;
+        CalculatePrice();
+    }
+
+    private void OnCheckOutDateChanged(DateTime? date)
+    {
+        _bookingModel.CheckOutDate = date;
+        CalculatePrice();
+    }
+
+    private void OnRoomCountChanged(int val)
+    {
+        _bookingModel.RoomCount = val;
+        CalculatePrice();
+    }
+
+    private void OnTravelerCountChanged(int val)
+    {
+        _bookingModel.TravelerCount = val;
+        CalculatePrice();
+    }
+
+    // Dynamic Seat Layout Engine
+    private void GenerateSeatLayout()
+    {
+        _seatRows.Clear();
+        SelectedSeatsList.Clear();
+
+        if (_selectedBus == null) return;
+
+        int seatsPerRow = 4;
+        int columnsCount = 5;
+        int aisleIndex = 2; // 0-based column index representing the aisle gap
+
+        if (_selectedBus.SeatLayoutType == "VIP_2_1")
+        {
+            seatsPerRow = 3;
+            columnsCount = 4;
+            aisleIndex = 2;
+        }
+        else if (_selectedBus.SeatLayoutType == "Sleeper_1_1")
+        {
+            seatsPerRow = 2;
+            columnsCount = 3;
+            aisleIndex = 1;
+        }
+
+        int totalSeatsCount = _selectedBus.TotalSeats;
+        int seatCounter = 1;
+        int rowsCount = (int)Math.Ceiling((double)totalSeatsCount / seatsPerRow);
+
+        for (int r = 0; r < rowsCount; r++)
+        {
+            var row = new List<BusSeat?>();
+            for (int c = 0; c < columnsCount; c++)
+            {
+                if (c == aisleIndex)
+                {
+                    row.Add(null); // Render aisle spacing
+                }
+                else
+                {
+                    if (seatCounter <= totalSeatsCount)
+                    {
+                        // Mocking some pre-reserved seats dynamically
+                        bool isReserved = (seatCounter == 3 || seatCounter == 7 || seatCounter == 12 || seatCounter == 18 || seatCounter == 25);
+                        
+                        row.Add(new BusSeat
+                        {
+                            Number = seatCounter,
+                            Label = seatCounter < 10 ? $"0{seatCounter}" : $"{seatCounter}",
+                            IsReserved = isReserved,
+                            IsSelected = false
+                        });
+                        seatCounter++;
+                    }
+                    else
+                    {
+                        row.Add(null); // Pad empty seats at backend
+                    }
+                }
+            }
+            _seatRows.Add(row);
+        }
+    }
+
+    private void ToggleSeatSelection(BusSeat seat)
+    {
+        seat.IsSelected = !seat.IsSelected;
+        
+        if (seat.IsSelected)
+        {
+            SelectedSeatsList.Add(seat.Number);
+        }
+        else
+        {
+            SelectedSeatsList.Remove(seat.Number);
+        }
+
+        CalculatePrice();
+    }
+
+    private void CalculatePrice()
+    {
+        if (_bookingModel.BookingType == "Bus" && _selectedBus != null)
+        {
+            TotalPrice = SelectedSeatsList.Count * _selectedBus.Price;
+        }
+        else if (_bookingModel.BookingType == "Hotel" && _selectedHotel != null)
+        {
+            var nights = TotalNights;
+            // Guard against negative/zero nights
+            if (nights <= 0) nights = 1; 
+            TotalPrice = nights * _bookingModel.RoomCount * _selectedHotel.PricePerNight;
+        }
+        else if (_bookingModel.BookingType == "Package" && _selectedPackage != null)
+        {
+            TotalPrice = _bookingModel.TravelerCount * _selectedPackage.PricePerPerson;
+        }
+        else
+        {
+            TotalPrice = 0;
+        }
+
+        StateHasChanged();
+    }
+
+    private bool IsFormSubmittable()
+    {
+        if (!_success) return false;
+        
+        // Custom validations based on service
+        if (_bookingModel.BookingType == "Bus")
+        {
+            return SelectedSeatsList.Any();
+        }
+        if (_bookingModel.BookingType == "Hotel")
+        {
+            return TotalNights > 0 && _bookingModel.RoomCount > 0;
+        }
+        if (_bookingModel.BookingType == "Package")
+        {
+            return _bookingModel.TravelerCount > 0;
+        }
+
+        return false;
+    }
+
+    private void SubmitBooking()
+    {
+        if (!IsFormSubmittable()) return;
+
+        Snackbar.Add($"Booking Confirmed Successfully for {_bookingModel.CustomerName}!", Severity.Success);
+        Snackbar.Add($"Total Charged: {TotalPrice.ToString("N0")} mmk", Severity.Info);
+        
+        // Reset state or navigate away
+        _bookingModel = new BookingFormModel();
+        SelectedSeatsList.Clear();
+        GenerateSeatLayout();
+        CalculatePrice();
+    }
+}

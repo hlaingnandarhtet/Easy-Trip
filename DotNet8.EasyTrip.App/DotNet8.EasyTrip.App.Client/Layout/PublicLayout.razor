@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@using MudBlazor
+
+<MudThemeProvider Theme="PublicTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Surface" Fixed="true" Class="px-6 border-b-2" Style="border-color: #f0f0f0;">
+        <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+        <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold" Style="letter-spacing: -0.5px;">Easy-Trip</MudText>
+        
+        <MudSpacer />
+        
+        <div class="d-none d-md-flex gap-4">
+            <MudButton Href="/" Variant="Variant.Text" Color="Color.Dark" Class="font-weight-medium">Home</MudButton>
+            <MudButton Href="/my-bookings" Variant="Variant.Text" Color="Color.Dark" Class="font-weight-medium">My Bookings</MudButton>
+            <MudButton Href="/dashboard" Variant="Variant.Outlined" Color="Color.Primary" Class="font-weight-medium rounded-pill border-2 px-6">Admin Panel</MudButton>
+        </div>
+        
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.End" Class="d-md-none" />
+    </MudAppBar>
+
+    <MudMainContent Style="background-color: #FAFAFA; min-height: 100vh; padding-top: 64px;">
+        @Body
+    </MudMainContent>
+    
+    <MudPaper Square="true" Elevation="0" Class="pa-8 text-center" Style="background-color: #0f172a; color: #94a3b8;">
+        <MudText Typo="Typo.body2">© 2026 Easy-Trip Travel System. All rights reserved.</MudText>
+    </MudPaper>
+</MudLayout>
+
+@code {
+    private MudTheme PublicTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#2563EB", // Modern Blue
+            Secondary = "#F59E0B", // Amber Warning
+            Surface = "#FFFFFF",
+            Background = "#FAFAFA",
+            AppbarBackground = "#FFFFFF",
+            TextPrimary = "#1E293B", // Slate 800
+        }
+    };
+}

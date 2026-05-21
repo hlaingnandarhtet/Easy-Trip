@@ -1,3 +1,4 @@
+using System.Net.Http;
 using DotNet8.EasyTrip.App.Client.Pages;
 using DotNet8.EasyTrip.App.Components;
 using MudBlazor.Services;
@@ -15,6 +16,11 @@ namespace DotNet8.EasyTrip.App
                 .AddInteractiveWebAssemblyComponents();
 
             builder.Services.AddMudServices();
+            builder.Services.AddScoped<DotNet8.EasyTrip.App.Client.Services.DrawerStateService>();
+            builder.Services.AddScoped<DotNet8.EasyTrip.App.Client.Services.TravelPackageApiService>();
+
+            // Register HttpClient pointing to the Backend Web API port for Server Prerendering
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7039/") });
 
             var app = builder.Build();
 

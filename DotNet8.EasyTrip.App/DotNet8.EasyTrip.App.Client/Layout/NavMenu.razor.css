@@ -1,0 +1,28 @@
+.navbar-toggler {
+    display: none;
+}
+
+.et-nav-scrollable {
+    display: block;
+    flex: 1;
+    overflow-y: auto;
+}
+
+@media (max-width: 640.98px) {
+    .navbar-toggler {
+        display: block;
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+
+    .et-nav-scrollable {
+        display: none;
+    }
+
+    .navbar-toggler:checked ~ .et-nav-scrollable {
+        display: block;
+    }
+}

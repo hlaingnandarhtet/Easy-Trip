@@ -1,0 +1,215 @@
+@page "/hotel-room"
+@page "/hotel-room/{HotelId:long}"
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+
+<MudContainer Class="et-page">
+    <PageHeader Title="Hotel Room Management"
+                Subtitle="Configure room options, night pricing, availability, and amenities."
+                Icon="@Icons.Material.Filled.MeetingRoom">
+        <Actions>
+            @if (_selectedHotelId > 0)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreatePage">
+                    Add New Room
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           StartIcon="@Icons.Material.Filled.Add" Disabled="true">
+                    Add New Room
+                </MudButton>
+            }
+        </Actions>
+    </PageHeader>
+
+    <MudPaper Class="et-table-card pa-4 mb-4" Elevation="0">
+        <div class="d-flex align-center gap-4 flex-wrap">
+            <MudSelect T="long" Label="Select Hotel" Value="_selectedHotelId" ValueChanged="OnHotelChanged"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 300px; max-width: 450px;"
+                       AnchorOrigin="Origin.BottomCenter">
+                <MudSelectItem T="long" Value="0">Choose a hotel...</MudSelectItem>
+                @foreach (var h in _hotels)
+                {
+                    <MudSelectItem T="long" Value="@h.Id">@h.HotelName (@h.Location)</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+    </MudPaper>
+
+    @if (_selectedHotelId == 0)
+    {
+        <MudPaper Class="et-table-card" Elevation="0">
+            <div class="et-empty-state py-12">
+                <MudIcon Icon="@Icons.Material.Filled.Hotel" Size="Size.Large" Style="opacity: 0.3;" />
+                <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No Hotel Selected</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Please select a hotel from the dropdown list to manage its rooms.</MudText>
+            </div>
+        </MudPaper>
+    }
+    else if (_isLoading)
+    {
+        <MudPaper Class="et-table-card" Elevation="0">
+            <div class="pa-12 d-flex justify-center align-center gap-3">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary" />
+                <MudText>Loading rooms...</MudText>
+            </div>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="et-table-card" Elevation="0">
+            <MudTable Items="_rooms" Hover="true" Dense="false" Striped="false" Elevation="0" Class="et-data-table">
+                <HeaderContent>
+                    <MudTh Style="width: 56px;">No.</MudTh>
+                    <MudTh>Room Type</MudTh>
+                    <MudTh>Price Per Night</MudTh>
+                    <MudTh>Available Rooms</MudTh>
+                    <MudTh>Amenities</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="text-align: right;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="No."><span class="et-row-no">@(_rooms.IndexOf(context) + 1)</span></MudTd>
+                    <MudTd DataLabel="Room Type">
+                        <MudText Style="font-weight: 700; color: #0F172A;">@(context.RoomTypeName ?? "Standard")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Price Per Night" Style="font-weight: 700; color: #059669;">
+                        @context.PricePerNight.ToString("N0") mmk
+                    </MudTd>
+                    <MudTd DataLabel="Available Rooms">@context.AvailableRooms rooms</MudTd>
+                    <MudTd DataLabel="Amenities">
+                        @if (!string.IsNullOrWhiteSpace(context.Amenities))
+                        {
+                            @foreach (var amenity in context.Amenities.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                <span class="et-badge et-badge--indigo mr-1 mb-1">@amenity.Trim()</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.HotelStatus == HotelStatus.Available)
+                        {
+                            <span class="et-badge et-badge--success">Available</span>
+                        }
+                        else
+                        {
+                            <span class="et-badge et-badge--danger">Full</span>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Actions" Style="text-align: right;">
+                        <MudTooltip Text="Edit">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="et-action-btn et-action-btn--edit"
+                                           OnClick="@(() => OpenEditPage(context.Id))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Delete">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="et-action-btn et-action-btn--delete ml-1"
+                                           OnClick="@(() => OpenDeleteDialog(context.Id))" />
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="et-empty-state py-8">
+                        <MudIcon Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Large" Style="opacity: 0.3;" />
+                        <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No Rooms Registered</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Add a new room to begin setting up room classes for this hotel.</MudText>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public long HotelId { get; set; }
+
+    private long _selectedHotelId;
+    private bool _isLoading = false;
+    private List<HotelResponseModel> _hotels = new();
+    private List<HotelRoomResponseModel> _rooms = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHotels();
+        
+        if (HotelId > 0)
+        {
+            _selectedHotelId = HotelId;
+            await LoadRooms();
+        }
+    }
+
+    private async Task LoadHotels()
+    {
+        try
+        {
+            // Load a large list of hotels to populate the dropdown
+            var response = await Http.GetFromJsonAsync<PaginationResponse<HotelResponseModel>>("api/Hotel?pageNo=1&pageSize=100");
+            if (response != null)
+            {
+                _hotels = response.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load hotels list: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadRooms()
+    {
+        if (_selectedHotelId == 0) return;
+        _isLoading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<HotelRoomResponseModel>>($"api/hotel/{_selectedHotelId}/room");
+            _rooms = response ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading room types: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnHotelChanged(long val)
+    {
+        _selectedHotelId = val;
+        await LoadRooms();
+    }
+
+    private void OpenCreatePage()
+    {
+        Nav.NavigateTo($"/hotel-room/create/{_selectedHotelId}");
+    }
+
+    private void OpenEditPage(long roomId)
+    {
+        Nav.NavigateTo($"/hotel-room/edit/{roomId}");
+    }
+
+    private async Task OpenDeleteDialog(long roomId)
+    {
+        var parameters = new DialogParameters { ["RoomId"] = roomId };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<HotelRoomDelete>("Confirm Delete Room", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadRooms();
+        }
+    }
+}

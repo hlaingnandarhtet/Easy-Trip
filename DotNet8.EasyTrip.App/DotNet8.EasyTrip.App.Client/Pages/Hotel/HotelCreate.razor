@@ -1,0 +1,45 @@
+@page "/hotel/create"
+@rendermode InteractiveWebAssembly
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to hotels
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.AddCircle" Class="mr-2" />
+                Add New Hotel
+            </MudText>
+            @* <MudText Typo="Typo.body2" Class="et-form-card__hero-sub">
+                Register a partner hotel and its primary location.
+            </MudText> *@
+        </div>
+
+        <MudForm @ref="_form" @bind-IsValid="_success">
+            <div class="et-form-section pb-4">
+                <div class="et-form-section__title">Hotel details</div>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Hotel Name" Required="true" RequiredError="Hotel name is required"
+                                       @bind-Value="_hotelModel.HotelName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Location" Required="true" RequiredError="Location is required"
+                                       @bind-Value="_hotelModel.Location" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Place" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </MudForm>
+
+        <div class="et-form-actions">
+            <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost">Cancel</MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@(!_success)" Class="et-btn-primary">
+                Save Hotel
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>

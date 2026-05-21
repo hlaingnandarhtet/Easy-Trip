@@ -1,0 +1,32 @@
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject DrawerStateService DrawerState
+@implements IDisposable
+
+<MudDrawer Open="DrawerState.IsOpen"
+           OpenChanged="OnOpenChanged"
+           ClipMode="DrawerClipMode.Always"
+           Elevation="2"
+           Variant="DrawerVariant.Responsive"
+           Breakpoint="Breakpoint.Md"
+           Class="et-drawer">
+    <MudDrawerHeader Class="et-drawer-header">
+        <MudText Typo="Typo.h6" Style="font-weight: 800; color: #0F172A;">
+            Easy<span style="color: #10B981;">Trip</span>
+        </MudText>
+        <MudText Typo="Typo.caption" Style="color: #64748B;">Travel Console</MudText>
+    </MudDrawerHeader>
+    <NavMenu />
+</MudDrawer>
+
+@code {
+    protected override void OnInitialized()
+    {
+        DrawerState.OnChange += OnDrawerStateChanged;
+    }
+
+    private void OnOpenChanged(bool open) => DrawerState.SetOpen(open);
+
+    private void OnDrawerStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => DrawerState.OnChange -= OnDrawerStateChanged;
+}

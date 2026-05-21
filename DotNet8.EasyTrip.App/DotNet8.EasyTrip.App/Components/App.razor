@@ -9,14 +9,184 @@
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
     <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="easytrip-ui.css" />
     <link rel="stylesheet" href="DotNet8.EasyTrip.App.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
+
+    <style>
+        #blazor-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #0B0F19 0%, #05070B 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            font-family: 'Roboto', 'Inter', -apple-system, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Automatically hides loader when MudBlazor layout is ready */
+        body:has(.et-mud-layout) #blazor-loading,
+        body:has(.mud-layout) #blazor-loading {
+            display: none !important;
+        }
+
+        /* Glassmorphism Container Card */
+        .loader-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            padding: 40px 60px;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Advanced Dual-Ring Orbital Animation */
+        .orbital-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 30px;
+        }
+
+        .outer-orbit {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-left-color: #10B981;
+            border-right-color: #10B981;
+            border-radius: 50%;
+            animation: rotateClockwise 1.2s cubic-bezier(0.53, 0.21, 0.29, 0.67) infinite;
+        }
+
+        .inner-orbit {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 50px;
+            height: 50px;
+            border: 2px solid transparent;
+            border-top-color: #3B82F6;
+            border-bottom-color: #3B82F6;
+            border-radius: 50%;
+            animation: rotateCounterClockwise 0.8s linear infinite;
+        }
+
+        .core-glow {
+            position: absolute;
+            top: 32px;
+            left: 32px;
+            width: 16px;
+            height: 16px;
+            background-color: #10B981;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #10B981, 0 0 40px #10B981;
+            animation: pulseCore 1.5s ease-in-out infinite;
+        }
+
+        .loader-headline {
+            color: #FFFFFF;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .loader-subtext {
+            color: #64748B;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Escaped @@ to resolve Blazor compilation error CS0103 */
+        @@keyframes rotateClockwise {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @@keyframes rotateCounterClockwise {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(-360deg);
+            }
+        }
+
+        @@keyframes pulseCore {
+            0%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <Routes />
+    <div id="blazor-loading">
+        <div class="loader-card">
+            <div class="orbital-container">
+                <div class="outer-orbit"></div>
+                <div class="inner-orbit"></div>
+                <div class="core-glow"></div>
+            </div>
+
+            <div class="loader-headline">EASY-TRIP</div>
+            <div class="loader-subtext">Syncing cloud assets, please hold...</div>
+        </div>
+    </div>
+
+    <DotNet8.EasyTrip.App.Client.Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script>
+        window.easyTripScroll = {
+            scrollById: function (elementId, amount) {
+                var el = document.getElementById(elementId);
+                if (el) el.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+        };
+        window.easyTripInvoice = {
+            open: function (base64Html, filename) {
+                var html = atob(base64Html);
+                var blob = new Blob([html], { type: 'text/html' });
+                var url = URL.createObjectURL(blob);
+                var win = window.open(url, '_blank');
+                if (!win) {
+                    // Fallback: trigger download if popup blocked
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename + '.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+                setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+            }
+        };
+    </script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

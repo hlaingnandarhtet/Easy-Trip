@@ -1,0 +1,9 @@
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject DrawerStateService DrawerState
+
+<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+               OnClick="OnToggle" aria-label="Toggle navigation" />
+
+@code {
+    private void OnToggle() => DrawerState.Toggle();
+}

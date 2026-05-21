@@ -1,0 +1,30 @@
+<div class="et-page-header">
+    <div class="et-page-header__left">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <div class="et-page-header__icon">
+                <MudIcon Icon="@Icon" Size="Size.Medium" />
+            </div>
+        }
+        <div>
+            <MudText Typo="Typo.h4" Class="et-page-header__title">@Title</MudText>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <MudText Typo="Typo.body2" Class="et-page-header__subtitle">@Subtitle</MudText>
+            }
+        </div>
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="d-flex align-center flex-wrap gap-2">
+            @Actions
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

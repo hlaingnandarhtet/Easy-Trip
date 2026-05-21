@@ -1,0 +1,175 @@
+@page "/bookings"
+@rendermode InteractiveWebAssembly
+@using DotNet8.EasyTripBackendApi.Models
+@using DotNet8.EasyTripBackendApi.Shared
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Booking Management"
+                Subtitle="Confirm or reject customer bookings. Rejected bus bookings release seats."
+                Icon="@Icons.Material.Filled.ConfirmationNumber" />
+
+    <MudPaper Class="et-table-card pa-4" Elevation="0">
+        @if (_loading)
+        {
+            <div class="d-flex justify-center py-8">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@_bookings" Hover="true" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Customer</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Travel Date</MudTh>
+                    <MudTh>Seats / Qty</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="text-align: right;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Id</MudTd>
+                    <MudTd>@(context.UserName ?? "—")</MudTd>
+                    <MudTd>@context.BookingType</MudTd>
+                    <MudTd>@context.TravelDate.ToString("dd-MM-yyyy")</MudTd>
+                    <MudTd>
+                        @if (context.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
+                        {
+                            @(context.Details?.SelectedSeats ?? "—")
+                        }
+                        else
+                        {
+                            @(context.Details?.Quantity.ToString() ?? "—")
+                        }
+                    </MudTd>
+                    <MudTd>@context.TotalAmount.ToString("N0") mmk</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.BookingStatusCode)">
+                            @GetStatusLabel(context.BookingStatusCode)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd Style="text-align: right;">
+                        @if (context.BookingStatusCode == BookingStatusCodes.Pending)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="me-1"
+                                       Disabled="@(_processingId == context.Id)"
+                                       OnClick="() => ConfirmBooking(context.Id)">
+                                Confirm
+                            </MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                                       Disabled="@(_processingId == context.Id)"
+                                       OnClick="() => RejectBooking(context.Id)">
+                                Reject
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4">No bookings found.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private long? _processingId;
+    private List<BookingResponseModel> _bookings = new();
+
+    protected override async Task OnInitializedAsync() => await LoadBookingsAsync();
+
+    private async Task LoadBookingsAsync()
+    {
+        _loading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<PaginationResponse<BookingResponseModel>>("api/booking?pageNo=1&pageSize=100");
+            _bookings = response?.Data?.ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load bookings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ConfirmBooking(long id)
+    {
+        _processingId = id;
+        try
+        {
+            var response = await Http.PostAsync($"api/admin/bookings/confirm/{id}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Booking confirmed.", Severity.Success);
+                await LoadBookingsAsync();
+            }
+            else
+            {
+                Snackbar.Add(await response.Content.ReadAsStringAsync(), Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _processingId = null;
+        }
+    }
+
+    private async Task RejectBooking(long id)
+    {
+        _processingId = id;
+        try
+        {
+            var response = await Http.PostAsync($"api/admin/bookings/reject/{id}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Booking rejected. Bus seats are available again.", Severity.Info);
+                await LoadBookingsAsync();
+            }
+            else
+            {
+                Snackbar.Add(await response.Content.ReadAsStringAsync(), Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _processingId = null;
+        }
+    }
+
+    private static string GetStatusLabel(int statusCode) => statusCode switch
+    {
+        BookingStatusCodes.Pending => "Pending",
+        BookingStatusCodes.Confirmed => "Confirmed",
+        BookingStatusCodes.Rejected => "Rejected",
+        _ => "Unknown"
+    };
+
+    private static Color GetStatusColor(int statusCode) => statusCode switch
+    {
+        BookingStatusCodes.Pending => Color.Warning,
+        BookingStatusCodes.Confirmed => Color.Success,
+        BookingStatusCodes.Rejected => Color.Error,
+        _ => Color.Default
+    };
+}

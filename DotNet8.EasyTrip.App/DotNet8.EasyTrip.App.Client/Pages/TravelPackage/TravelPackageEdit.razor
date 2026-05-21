@@ -1,0 +1,139 @@
+@page "/travel-package/edit/{Id:long}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to travel packages
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Edit Travel Package
+            </MudText>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="pa-6 d-flex justify-center">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+            <MudForm @ref="_form">
+                <div class="et-form-section pb-4">
+                    <div class="et-form-section__title">Package Details</div>
+                    <MudGrid Spacing="3">
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Package Name*" Required="true"
+                                          RequiredError="Package name is required"
+                                          @bind-Value="_packageModel.PackageName"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal" Label="Package Price (mmk)*" Required="true"
+                                             RequiredError="Price is required"
+                                             @bind-Value="_packageModel.PackagePrice"
+                                             Min="0" Format="N0"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal?" Label="Discount (%)"
+                                             @bind-Value="_packageModel.DiscountPercentage"
+                                             Min="0" Max="100"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int" Label="Duration (days)"
+                                             Value="_packageModel.DurationDays"
+                                             ValueChanged="OnDurationChanged"
+                                             Min="1"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             HelperText="Change duration to auto-update End Date" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Start Date*"
+                                           Date="_startDate"
+                                           DateChanged="OnStartDateChanged"
+                                           Required="true" RequiredError="Start date is required"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           Editable="true" OpenTo="OpenTo.Date" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="End Date*"
+                                           Date="_endDate"
+                                           DateChanged="OnEndDateChanged"
+                                           Required="true" RequiredError="End date is required"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           Editable="true" OpenTo="OpenTo.Date" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long?" Label="Bus" @bind-Value="_packageModel.BusId"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       AnchorOrigin="Origin.BottomCenter"
+                                       HelperText="@(_buses.Count == 0 ? "No buses available" : $"{_buses.Count} bus(es) loaded")">
+                                @foreach (var b in _buses)
+                                {
+                                    <MudSelectItem T="long?" Value="@b.Id">@b.BusName (@b.BusNumber)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long?" Label="Hotel" @bind-Value="_packageModel.HotelId"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       AnchorOrigin="Origin.BottomCenter"
+                                       HelperText="@(_hotels.Count == 0 ? "No hotels available" : $"{_hotels.Count} hotel(s) loaded")">
+                                @foreach (var h in _hotels)
+                                {
+                                    <MudSelectItem T="long?" Value="@h.Id">@h.HotelName (@h.Location)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="PackageStatus" Label="Status" @bind-Value="_packageModel.PackageStatus"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="PackageStatus" Value="PackageStatus.Active">Active</MudSelectItem>
+                                <MudSelectItem T="PackageStatus" Value="PackageStatus.Inactive">Inactive</MudSelectItem>
+                                <MudSelectItem T="PackageStatus" Value="PackageStatus.Expired">Expired</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudCheckBox T="bool?" Label="Transfer service included"
+                                         @bind-Value="_packageModel.TransferService"
+                                         Color="Color.Primary" />
+                        </MudItem>
+
+                    </MudGrid>
+                </div>
+            </MudForm>
+
+            <div class="et-form-actions">
+                <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost" Disabled="_isSaving">Cancel</MudButton>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit"
+                           Disabled="_isSaving" Class="et-btn-primary">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save Changes
+                </MudButton>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>

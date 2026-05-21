@@ -1,0 +1,512 @@
+@page "/"
+@layout DotNet8.EasyTrip.App.Client.Layout.PublicLayout
+@using MudBlazor
+@using DotNet8.EasyTripBackendApi.Models
+@using DotNet8.EasyTripBackendApi.Shared
+@using System.Net.Http.Json
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- HERO + SEARCH BOX                            -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="et-hero">
+    <MudContainer MaxWidth="MaxWidth.Large" Style="position: relative; z-index: 1;">
+        <MudText Typo="Typo.h4" Style="color:#fff; font-weight:800; margin-bottom:8px; text-shadow: 0 2px 12px rgba(0,0,0,0.3);">
+            Search Lowest Price
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color:rgba(255,255,255,0.85); margin-bottom:24px;">
+            Book Buses, Hotels &amp; Travel Packages at the best rates
+        </MudText>
+
+        <!-- Service Tabs -->
+        <div class="et-tabs">
+            <div class="et-tab @(_activeTab == "Bus" ? "active" : "")" @onclick='() => _activeTab = "Bus"'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>
+                Bus
+            </div>
+            <div class="et-tab @(_activeTab == "Hotel" ? "active" : "")" @onclick='() => _activeTab = "Hotel"'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M9 13h6M9 17h6"/></svg>
+                Hotels
+            </div>
+            <div class="et-tab @(_activeTab == "Package" ? "active" : "")" @onclick='() => _activeTab = "Package"'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                Holidays
+            </div>
+        </div>
+
+        <!-- Search Box -->
+        <div class="et-search-box">
+            @if (_activeTab == "Bus")
+            {
+                <!-- Trip Type Pills -->
+                <div class="et-trip-tabs">
+                    <button class="et-trip-tab @(_tripType == "One Way" ? "active" : "")" @onclick='() => _tripType = "One Way"'>One Way</button>
+                    <button class="et-trip-tab @(_tripType == "Round Trip" ? "active" : "")" @onclick='() => _tripType = "Round Trip"'>Round Trip</button>
+                </div>
+
+                <div class="et-search-fields">
+                    <!-- FROM -->
+                    <div class="et-field-wrap">
+                        <div class="et-field-label">FROM</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <select @bind="_fromCity" @bind:after="SearchBuses" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; appearance: none;">
+                                <option value="">All Origins</option>
+                                @if (_busFromCities != null)
+                                {
+                                    @foreach (var city in _busFromCities)
+                                    {
+                                        <option value="@city">@city</option>
+                                    }
+                                }
+                            </select>
+                            <div style="pointer-events: none;">
+                                <div class="et-field-value">@(string.IsNullOrEmpty(_fromCity) ? "Select Origin" : _fromCity)</div>
+                                <div class="et-field-sub">@(string.IsNullOrEmpty(_fromCity) ? "Myanmar" : _fromCity + ", Myanmar")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Swap Icon -->
+                    <div class="et-field-divider" style="cursor:pointer;" @onclick="SwapCities">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2.5">
+                            <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                        </svg>
+                    </div>
+
+                    <!-- TO -->
+                    <div class="et-field-wrap">
+                        <div class="et-field-label">TO</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <select @bind="_toCity" @bind:after="SearchBuses" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; appearance: none;">
+                                <option value="">All Destinations</option>
+                                @if (_busToCities != null)
+                                {
+                                    @foreach (var city in _busToCities)
+                                    {
+                                        <option value="@city">@city</option>
+                                    }
+                                }
+                            </select>
+                            <div style="pointer-events: none;">
+                                <div class="et-field-value">@(string.IsNullOrEmpty(_toCity) ? "Select Destination" : _toCity)</div>
+                                <div class="et-field-sub">@(string.IsNullOrEmpty(_toCity) ? "Myanmar" : _toCity + ", Myanmar")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DATE -->
+                    <div class="et-field-wrap" style="max-width:160px;">
+                        <div class="et-field-label">DEPARTURE DATE</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <input type="date" @bind="_departureDate" @bind:after="SearchBuses" @bind:format="yyyy-MM-dd" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10;" />
+                            <div class="et-field-value" style="font-size:1.3rem;">@(_departureDate?.ToString("dd-MM-yyyy") ?? "Select Date")</div>
+                            <div class="et-field-sub">@(_departureDate?.ToString("dddd") ?? "")</div>
+                        </div>
+                    </div>
+
+                    @if (_tripType == "Round Trip")
+                    {
+                        <!-- RETURN DATE -->
+                        <div class="et-field-wrap" style="max-width:160px;">
+                            <div class="et-field-label">RETURN DATE</div>
+                            <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                                <input type="date" @bind="_returnDate" @bind:format="yyyy-MM-dd" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10;" />
+                                <div class="et-field-value" style="font-size:1.1rem; color:#0f172a;">@(_returnDate?.ToString("dd-MM-yyyy") ?? "Select Date")</div>
+                                <div class="et-field-sub">@(_returnDate?.ToString("dddd") ?? "to save more")</div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- TRAVELLER -->
+                    <div class="et-field-wrap" style="max-width:160px;">
+                        <div class="et-field-label">TRAVELLER &amp; CLASS</div>
+                        <MudMenu ActivationEvent="MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                            <ActivatorContent>
+                                <div class="et-field-input-border" style="cursor:pointer;">
+                                    <div class="et-field-value" style="font-size:1.2rem;">@_travellers Traveller@(_travellers > 1 ? "s" : "") ˅</div>
+                                    <div class="et-field-sub">@(string.IsNullOrEmpty(_busClass) ? "Any Class" : _busClass)</div>
+                                </div>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <div style="padding: 16px; width: 220px;">
+                                    <MudNumericField T="int" @bind-Value="_travellers" Label="Travellers" Min="1" Max="10" Margin="Margin.Dense" Variant="Variant.Outlined" Class="mb-3" />
+                                    <MudSelect T="string" @bind-Value="_busClass" Label="Class" Margin="Margin.Dense" Variant="Variant.Outlined">
+                                        <MudSelectItem Value='""'>Any Class</MudSelectItem>
+                                        <MudSelectItem Value='"Economy"'>Economy</MudSelectItem>
+                                        <MudSelectItem Value='"First Class"'>First Class</MudSelectItem>
+                                        <MudSelectItem Value='"VIP"'>VIP</MudSelectItem>
+                                    </MudSelect>
+                                </div>
+                            </ChildContent>
+                        </MudMenu>
+                    </div>
+
+                    <!-- SEARCH BTN -->
+                    <button type="button" class="et-search-btn" style="position:relative; z-index:20;" @onclick="SearchBuses">SEARCH</button>
+                </div>
+
+                <!-- Special Fares -->
+                <div style="margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 16px;">
+                    <MudText Typo="Typo.caption" Style="font-weight: 700; color: #64748b;">Special Fares (Optional):</MudText>
+                    <div class="et-fare-chips">
+                        @foreach (var fare in _specialFares)
+                        {
+                            <div class="et-fare-chip @(fare.Active ? "active" : "")" @onclick="() => ToggleFare(fare)" style="@(fare.Active ? "border-color:#1a56db; background:#eff6ff;" : "")">
+                                <span class="chip-title">@fare.Name</span>
+                                <span class="chip-sub">@fare.Desc</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (_activeTab == "Hotel")
+            {
+                <div class="et-search-fields">
+                    <div class="et-field-wrap">
+                        <div class="et-field-label">CITY / HOTEL / AREA</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <select @bind="_hotelCity" @bind:after="SearchHotels" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; appearance: none;">
+                                <option value="">All Destinations</option>
+                                @if (_hotelCities != null)
+                                {
+                                    @foreach (var city in _hotelCities)
+                                    {
+                                        <option value="@city">@city</option>
+                                    }
+                                }
+                            </select>
+                            <div style="pointer-events: none;">
+                                <div class="et-field-value">@(string.IsNullOrEmpty(_hotelCity) ? "Select City" : _hotelCity)</div>
+                                <div class="et-field-sub">@(string.IsNullOrEmpty(_hotelCity) ? "Destination" : "Myanmar")</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="et-field-wrap" style="max-width:160px;">
+                        <div class="et-field-label">CHECK IN</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <input type="date" @bind="_checkInDate" @bind:format="yyyy-MM-dd" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10;" />
+                            <div class="et-field-value" style="font-size:1.2rem;">@(_checkInDate?.ToString("dd-MM-yyyy") ?? "Select Date")</div>
+                        </div>
+                    </div>
+                    <div class="et-field-wrap" style="max-width:160px;">
+                        <div class="et-field-label">CHECK OUT</div>
+                        <div class="et-field-input-border" style="position: relative; cursor: pointer;">
+                            <input type="date" @bind="_checkOutDate" @bind:format="yyyy-MM-dd" style="position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10;" />
+                            <div class="et-field-value" style="font-size:1.2rem;">@(_checkOutDate?.ToString("dd-MM-yyyy") ?? "Select Date")</div>
+                        </div>
+                    </div>
+                    <div class="et-field-wrap" style="max-width:180px;">
+                        <div class="et-field-label">ROOMS &amp; GUESTS</div>
+                        <MudMenu ActivationEvent="MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                            <ActivatorContent>
+                                <div class="et-field-input-border" style="cursor:pointer;">
+                                    <div class="et-field-value" style="font-size:1.2rem;">@_rooms Room@(_rooms > 1 ? "s" : "") ˅</div>
+                                    <div class="et-field-sub">@_adults Adult@(_adults > 1 ? "s" : ""), @_children Child@(_children > 1 ? "ren" : "")</div>
+                                </div>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <div style="padding: 16px; width: 250px;">
+                                    <MudNumericField T="int" @bind-Value="_rooms" Label="Rooms" Min="1" Max="5" Margin="Margin.Dense" Variant="Variant.Outlined" Class="mb-3" />
+                                    <MudNumericField T="int" @bind-Value="_adults" Label="Adults" Min="1" Max="10" Margin="Margin.Dense" Variant="Variant.Outlined" Class="mb-3" />
+                                    <MudNumericField T="int" @bind-Value="_children" Label="Children" Min="0" Max="5" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                                </div>
+                            </ChildContent>
+                        </MudMenu>
+                    </div>
+                    <button type="button" class="et-search-btn" style="position:relative; z-index:20;" @onclick="SearchHotels">SEARCH</button>
+                </div>
+            }
+            else
+            {
+                <div style="text-align:center; padding: 24px 0;">
+                    <MudText Typo="Typo.h6" Style="color: #64748b;">Browse our exclusive holiday packages below</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick='() => Navigation.NavigateTo("/travel-package")'>
+                        View All Packages
+                    </MudButton>
+                </div>
+            }
+        </div>
+    </MudContainer>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- EXCLUSIVE OFFERS ROW                          -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="et-offers-section">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="font-size:1.3rem; font-weight:800; color:#0f172a; margin-bottom:12px;">Exclusive Offers</div>
+        <div class="et-offer-tabs">
+            @foreach (var tab in new[] { "Best Offers", "Bank Offers", "Bus", "Hotel", "Holidays", "Cabs" })
+            {
+                <div class="et-offer-tab @(_offerTab == tab ? "active" : "")" @onclick="() => _offerTab = tab">@tab</div>
+            }
+            <div style="margin-left:auto; padding: 10px 0;">
+                <span style="color:#1a56db; font-weight:700; font-size:0.85rem; cursor:pointer;">View All Offers →</span>
+            </div>
+        </div>
+        <div style="padding: 20px 0; color: #94a3b8; font-size: 0.9rem; text-align:center;">
+            🎁 Special discounts and exclusive offers for @_offerTab coming soon!
+        </div>
+    </MudContainer>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MAIN CONTENT                                  -->
+<!-- ══════════════════════════════════════════════ -->
+<MudContainer MaxWidth="MaxWidth.Large">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center align-center py-16">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else
+    {
+        <!-- ── Available Buses ── -->
+        @if (_activeTab == "Bus" && _allBuses != null && _allBuses.Any())
+        {
+            <div class="et-section">
+                <div class="et-section-title">🚌 Available Express Buses</div>
+                <div class="et-section-sub">Search by departure date — select a date and move with the arrows.</div>
+
+                <!-- One-week date strip with left/right arrows -->
+                <div class="et-week-nav">
+                    <button type="button" class="et-week-arrow" aria-label="Previous week" @onclick="PrevWeek">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <div class="et-week-days">
+                        @foreach (var day in WeekDays)
+                        {
+                            var isSelected = day.Date == _selectedDate.Date;
+                            var isToday = day.Date == DateTime.Today;
+                            var dayCount = GetBusCountForDay(day);
+                            <button type="button"
+                                    class="et-week-day @(isSelected ? "active" : "") @(isToday ? "today" : "")"
+                                    @onclick="() => SelectDay(day)">
+                                <span class="et-week-day-name">@day.ToString("ddd")</span>
+                                <span class="et-week-day-num">@day.ToString("dd")</span>
+                                <span class="et-week-day-month">@day.ToString("MMM")</span>
+                                @if (dayCount > 0)
+                                {
+                                    <span class="et-week-day-count">@dayCount bus@(dayCount > 1 ? "es" : "")</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                    <button type="button" class="et-week-arrow" aria-label="Next week" @onclick="NextWeek">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                </div>
+                <div class="et-week-range-label">
+                    @_weekStart.ToString("dd-MM-yyyy") – @_weekStart.AddDays(6).ToString("dd-MM-yyyy")
+                    · <strong>@_selectedDate.ToString("dddd, dd-MM-yyyy")</strong> Upcoming cars
+                </div>
+
+                @if (!buses.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        There are no trains departing on this day. Please select a different date or clear the From/To filter above.
+                    </MudAlert>
+                }
+                else
+                {
+                    var groupIndex = 0;
+                    @foreach (var group in buses.GroupBy(b => b.BusTypeName ?? "Other Operators"))
+                    {
+                        var scrollId = $"bus-scroll-{groupIndex}";
+                        groupIndex++;
+
+                        <div class="et-group-label">
+                            <div class="et-group-label-line"></div>
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Style="font-weight:700;">@group.Key</MudChip>
+                            <div class="et-group-label-line"></div>
+                        </div>
+
+                        <!-- Horizontal bus card carousel with scroll arrows -->
+                        <div class="et-bus-carousel-wrap mb-6">
+                            <button type="button" class="et-carousel-arrow et-carousel-arrow-left" aria-label="Scroll left" @onclick="() => ScrollBusCards(scrollId, -1)">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                            </button>
+                            <div id="@scrollId" class="et-bus-carousel">
+                                @foreach (var bus in group)
+                                {
+                                    <div class="et-bus-card-slide">
+                                        <div class="et-bus-card">
+                                            <img class="et-bus-card-img"
+                                                 src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80"
+                                                 alt="Bus" />
+                                            <div class="et-bus-card-body">
+                                                <div class="et-bus-name">@(bus.BusName ?? bus.BusNumber)</div>
+                                                @if (!string.IsNullOrEmpty(bus.Departure))
+                                                {
+                                                    <div class="et-bus-departure">
+                                                        ထွက်ချိန် — @bus.Departure
+                                                    </div>
+                                                }
+                                                <div class="et-bus-route">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+                                                    @bus.StartPoint → @bus.EndPoint
+                                                </div>
+                                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                                                    @if (!string.IsNullOrEmpty(bus.BusClass))
+                                                    {
+                                                        <span class="et-bus-badge et-badge-blue">@bus.BusClass</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(bus.TripType))
+                                                    {
+                                                        <span class="et-bus-badge et-badge-green">@bus.TripType</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(bus.TimeSlot))
+                                                    {
+                                                        <span class="et-bus-badge et-badge-orange">@bus.TimeSlot</span>
+                                                    }
+                                                </div>
+                                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                    <div>
+                                                        <div style="font-size:0.75rem; color:#64748b;">Starting from</div>
+                                                        <div class="et-bus-price">
+                                                            @(bus.Price.HasValue ? $"{bus.Price.Value:N0}" : "—") mmk <span>/ seat</span>
+                                                        </div>
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(bus.Departure))
+                                                    {
+                                                        <div style="text-align:right;">
+                                                            <div style="font-size:0.72rem; color:#94a3b8;">Departs</div>
+                                                            <div style="font-weight:700; color:#0f172a; font-size:0.9rem;">@bus.Departure</div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="et-bus-card-footer">
+                                                @if (IsBusDeparted(bus))
+                                                {
+                                                    <button class="et-book-btn" disabled style="background-color: #94a3b8; border-color: #94a3b8; color: #fff; cursor: not-allowed; opacity: 0.8;">Departed</button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="et-book-btn" @onclick='() => BookNow("Bus", bus.Id)'>Select Seats →</button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <button type="button" class="et-carousel-arrow et-carousel-arrow-right" aria-label="Scroll right" @onclick="() => ScrollBusCards(scrollId, 1)">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        <!-- ── Hotels ── -->
+        @if (_activeTab == "Hotel" && hotels != null && hotels.Any())
+        {
+            <div class="et-section" style="padding-top: 0;">
+                <div class="et-section-title">🏨 Premium Hotels &amp; Rooms</div>
+                <div class="et-section-sub">Handpicked hotels for a comfortable stay</div>
+
+                @if (!hotels.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No hotels found matching your search criteria.</MudAlert>
+                }
+                else
+                {
+                    <MudGrid Spacing="3">
+                        @foreach (var hotel in hotels.Take(8))
+                        {
+                            <MudItem xs="12" sm="6" md="4" lg="3">
+                                <div class="et-hotel-card">
+                                    <img style="height:160px; width:100%; object-fit:cover;"
+                                         src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80"
+                                         alt="Hotel" />
+                                    <MudCardContent Class="pa-5" Style="flex:1;">
+                                        <MudText Typo="Typo.h6" Style="font-weight:800; margin-bottom:4px;">@hotel.HotelName</MudText>
+                                        <div style="display:flex; align-items:center; gap:6px; color:#64748b; font-size:0.85rem; margin-bottom:12px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+                                            @hotel.Location
+                                        </div>
+                                        @if (hotel.HotelRooms != null && hotel.HotelRooms.Any())
+                                        {
+                                            var lowestPrice = hotel.HotelRooms.Min(r => r.PricePerNight);
+                                            <div style="display:flex; align-items:baseline; gap:4px;">
+                                                <span style="font-size:1.3rem; font-weight:800; color:#0f172a;">@lowestPrice mmk</span>
+                                                <span style="font-size:0.8rem; color:#64748b;">/ night</span>
+                                            </div>
+                                        }
+                                    </MudCardContent>
+                                    <div style="padding: 0 20px 20px;">
+                                        @if (hotel.HotelRooms != null && hotel.HotelRooms.Any())
+                                        {
+                                            <button class="et-book-btn" @onclick='() => BookNow("Hotel", hotel.Id)'>Book Room →</button>
+                                        }
+                                    </div>
+                                </div>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+            </div>
+        }
+
+        <!-- ── Travel Packages ── -->
+        @if (packages != null && packages.Any())
+        {
+            <div class="et-section" style="padding-top: 0;">
+                <div class="et-section-title">✈️ Exclusive Travel Packages</div>
+                <div class="et-section-sub">All-inclusive deals for your dream vacation</div>
+
+                <MudGrid Spacing="3">
+                    @foreach (var pkg in packages.Take(4))
+                    {
+                        <MudItem xs="12" sm="6" md="4" lg="3">
+                            <div class="et-pkg-card" @onclick='() => BookNow("Package", pkg.Id)' style="cursor:pointer;">
+                                <img class="et-pkg-img"
+                                     src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80"
+                                     alt="Package" />
+                                <div class="et-pkg-overlay">
+                                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:4px;">@pkg.PackageName</div>
+                                    <div style="font-size:0.82rem; opacity:0.85; margin-bottom:10px;">
+                                        @pkg.DurationDays Days / @(pkg.DurationDays - 1) Nights • Includes Bus &amp; Hotel
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div style="font-size:1.3rem; font-weight:800;">@pkg.PackagePrice mmk</div>
+                                        <button class="et-book-btn" style="width:auto; padding: 8px 16px; background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.5); color:#fff;" @onclick:stopPropagation @onclick='() => BookNow("Package", pkg.Id)'>
+                                            Book →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </div>
+        }
+    }
+</MudContainer>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- WHY CHOOSE US                                 -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="et-features">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="text-align:center; margin-bottom: 40px;">
+            <div class="et-section-title">Why Choose Easy-Trip?</div>
+            <div class="et-section-sub">Your trusted travel partner across Myanmar</div>
+        </div>
+        <MudGrid Spacing="4">
+            @foreach (var feature in _features)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <div style="text-align:center;">
+                        <div class="et-feature-icon" style="background: @feature.BgColor; margin: 0 auto;">
+                            <span style="font-size:1.6rem;">@feature.Icon</span>
+                        </div>
+                        <div style="font-size:1rem; font-weight:800; color:#0f172a; margin-bottom:8px;">@feature.Title</div>
+                        <div style="font-size:0.85rem; color:#64748b; line-height:1.6;">@feature.Desc</div>
+                    </div>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudContainer>
+</div>

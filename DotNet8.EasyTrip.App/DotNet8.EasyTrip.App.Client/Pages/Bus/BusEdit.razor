@@ -1,0 +1,87 @@
+@page "/bus/edit/{Id:long}"
+@rendermode InteractiveWebAssembly
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to buses
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Edit Bus
+            </MudText>
+            @* <MudText Typo="Typo.body2" Class="et-form-card__hero-sub">
+                Update route, schedule, and fleet details for bus #@Id.
+            </MudText> *@
+        </div>
+
+        <MudForm @ref="_form" @bind-IsValid="_success">
+            <div class="et-form-section">
+                <div class="et-form-section__title">Basic information</div>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="long?" Label="Bus Type (Operator)" Required="true" RequiredError="Bus type is required"
+                                   Value="_busModel.BusTypeId" ValueChanged="OnBusTypeChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem T="long?" Value="null">Select Operator...</MudSelectItem>
+                            @foreach (var type in _busTypes)
+                            {
+                                <MudSelectItem T="long?" Value="@type.Id">@type.TypeName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Bus Number" Required="true" RequiredError="Bus number is required"
+                                      @bind-Value="_busModel.BusNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Bus Class" @bind-Value="_busModel.BusClass" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int?" Label="Total Seats" @bind-Value="_busModel.TotalSeats" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Price (mmk)" @bind-Value="_busModel.Price" Min="0" Format="N0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Driver Name" @bind-Value="_busModel.DriverName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+
+            <div class="et-form-section pb-4">
+                <div class="et-form-section__title">Route & schedule</div>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Start Point" @bind-Value="_busModel.StartPoint" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="End Point" @bind-Value="_busModel.EndPoint" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Departure" InputType="InputType.DateTimeLocal" @bind-Value="_departureString" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Arrival" InputType="InputType.DateTimeLocal" @bind-Value="_arrivalString" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Trip Type" @bind-Value="_busModel.TripType" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Time Slot" @bind-Value="_busModel.TimeSlot" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </MudForm>
+
+        <div class="et-form-actions">
+            <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost">Cancel</MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@(!_success)" Class="et-btn-primary">
+                Save Changes
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>

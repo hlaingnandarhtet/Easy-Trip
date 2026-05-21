@@ -1,0 +1,49 @@
+<MudDialog Class="et-dialog et-dialog-danger">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: 800;">
+            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" Color="Color.Error" />
+            Delete Hotel Room
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-0">
+            This permanently removes this room configuration from the hotel. This action cannot be undone.
+        </MudAlert>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="Confirm" Class="et-btn-primary">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private HttpClient Http { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+
+    [Parameter] public long RoomId { get; set; }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Confirm()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/room/{RoomId}/delete");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Hotel room deleted successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to delete room: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+    }
+}

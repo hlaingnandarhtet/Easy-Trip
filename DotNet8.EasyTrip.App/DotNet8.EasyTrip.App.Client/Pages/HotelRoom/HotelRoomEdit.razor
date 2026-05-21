@@ -1,0 +1,187 @@
+@page "/hotel-room/edit/{Id:long}"
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to rooms
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Edit Hotel Room
+            </MudText>
+        </div>
+
+        <MudForm @ref="_form" @bind-IsValid="_success">
+            <div class="et-form-section pb-4">
+                <div class="et-form-section__title">Room specifications</div>
+                
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-center align-center py-8">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </div>
+                }
+                else
+                {
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long?" Label="Room Type" Required="true" RequiredError="Room type is required"
+                                       @bind-Value="_roomModel.RoomTypeId" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="long?" Value="null">Select Room Type...</MudSelectItem>
+                                @foreach (var type in _roomTypes)
+                                {
+                                    <MudSelectItem T="long?" Value="@type.Id">@type.TypeName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal" Label="Price Per Night (mmk)" Required="true" RequiredError="Price per night is required"
+                                             @bind-Value="_roomModel.PricePerNight" Min="0" Format="N0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int" Label="Available Rooms" Required="true" RequiredError="Number of available rooms is required"
+                                             @bind-Value="_roomModel.AvailableRooms" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="HotelStatus" Label="Status" @bind-Value="_roomModel.HotelStatus"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="HotelStatus" Value="HotelStatus.Available">Available</MudSelectItem>
+                                <MudSelectItem T="HotelStatus" Value="HotelStatus.Full">Full</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField T="string" Label="Amenities" Placeholder="e.g. WiFi, AC, Breakfast, TV"
+                                          @bind-Value="_roomModel.Amenities" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          HelperText="Enter amenities as a comma-separated list" />
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudForm>
+
+        @if (!_isLoading)
+        {
+            <div class="et-form-actions">
+                <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost" Disabled="_isSaving">Cancel</MudButton>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@(!_success || _isSaving)" Class="et-btn-primary">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save Changes
+                </MudButton>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private HotelRoomRequestModel _roomModel = new();
+    private long _hotelId;
+
+    private bool _success = false;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private MudForm? _form;
+    private List<RoomTypeResponseModel> _roomTypes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var typesTask = Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtypes");
+            var roomTask = Http.GetFromJsonAsync<HotelRoomResponseModel>($"api/room/{Id}");
+            
+            await Task.WhenAll(typesTask, roomTask);
+
+            _roomTypes = typesTask.Result ?? new();
+            
+            var roomDetails = roomTask.Result;
+            if (roomDetails != null)
+            {
+                _hotelId = roomDetails.HotelId ?? 0;
+                _roomModel = new HotelRoomRequestModel
+                {
+                    RoomTypeId = roomDetails.RoomTypeId,
+                    PricePerNight = roomDetails.PricePerNight,
+                    AvailableRooms = roomDetails.AvailableRooms,
+                    HotelStatus = roomDetails.HotelStatus,
+                    Amenities = roomDetails.Amenities
+                };
+            }
+            else
+            {
+                Snackbar.Add("Room details not found", Severity.Error);
+                Cancel();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load details: {ex.Message}", Severity.Error);
+            Cancel();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        if (_hotelId > 0)
+        {
+            Nav.NavigateTo($"/hotel-room/{_hotelId}");
+        }
+        else
+        {
+            Nav.NavigateTo("/hotel-room");
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (_form != null)
+        {
+            await _form.ValidateAsync();
+            if (!_form.IsValid) return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/room/{Id}/update", _roomModel);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Room updated successfully!", Severity.Success);
+                Cancel();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to update room: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

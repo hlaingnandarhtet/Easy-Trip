@@ -6,6 +6,8 @@
 
 main {
     flex: 1;
+    background-color: #F8FAFC;
+    min-height: 100vh;
 }
 
 .sidebar {
@@ -21,12 +23,6 @@ main {
     height: 4rem;
     display: flex;
     align-items: center;
-}
-
-main {
-    flex: 1;
-    background-color: #F8FAFC;
-    min-height: 100vh;
 }
 
     .top-row ::deep a, .top-row ::deep .btn-link {

@@ -1,0 +1,96 @@
+@page "/bus"
+@inherits ComponentBase
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Bus Management"
+                Subtitle="Manage fleet routes, schedules, pricing, and driver assignments."
+                Icon="@Icons.Material.Filled.DirectionsBus">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                Add New Bus
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    <MudPaper Class="et-table-card" Elevation="0">
+        <div class="et-table-toolbar">
+            <div class="d-flex align-center gap-3 flex-wrap w-100">
+                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search bus name or number..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="false"
+                              Style="min-width: 260px; max-width: 420px; flex: 1;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                    Search
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable T="BusResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
+                  Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px;">No.</MudTh>
+                @* <MudTh>Record ID</MudTh> *@
+                <MudTh>Bus Name</MudTh>
+                <MudTh>Number</MudTh>
+                <MudTh>Class</MudTh>
+                <MudTh>Seats</MudTh>
+                <MudTh>Price</MudTh>
+                <MudTh>Route</MudTh>
+                <MudTh>Schedule</MudTh>
+                <MudTh>Driver</MudTh>
+                <MudTh>Trip</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
+                <MudTd DataLabel="Bus Name">
+                    <MudText Style="font-weight: 700; color: #0F172A;">@context.BusName</MudText>
+                </MudTd>
+                <MudTd DataLabel="Number" Style="color: #64748B;">@context.BusNumber</MudTd>
+                <MudTd DataLabel="Class">
+                    <span class="et-badge et-badge--indigo">@context.BusClass</span>
+                </MudTd>
+                <MudTd DataLabel="Seats">@context.TotalSeats</MudTd>
+                <MudTd DataLabel="Price" Style="font-weight: 700;">@(context.Price.HasValue ? $"{context.Price.Value:N0} mmk" : "—")</MudTd>
+                <MudTd DataLabel="Route">
+                    <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.StartPoint → @context.EndPoint</MudText>
+                </MudTd>
+                <MudTd DataLabel="Schedule" Style="color: #64748B; font-size: 0.85rem;">
+                    @context.Departure — @context.Arrival
+                </MudTd>
+                <MudTd DataLabel="Driver">@context.DriverName</MudTd>
+                <MudTd DataLabel="Trip">@context.TripType</MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudTooltip Text="Edit">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="et-action-btn et-action-btn--edit"
+                                       OnClick="@(() => OpenEditDialog(context))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Delete">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="et-action-btn et-action-btn--delete ml-1"
+                                       OnClick="@(() => OpenDeleteDialog(context.Id))" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="et-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" Size="Size.Large" Color="Color.Default" Style="opacity: 0.4;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No buses found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Try a different search or add a new bus.</MudText>
+                </div>
+            </NoRecordsContent>
+            <LoadingContent>
+                <div class="pa-6 d-flex align-center gap-3">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                    <MudText>Loading buses...</MudText>
+                </div>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager InfoFormat="{first_item}-{last_item} of {all_items}" HorizontalAlignment="HorizontalAlignment.Right" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>

@@ -1,0 +1,109 @@
+@page "/travel-package"
+@inherits ComponentBase
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Travel Packages"
+                Subtitle="Curate holiday packages, discounts, and itineraries."
+                Icon="@Icons.Material.Filled.CardTravel">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                Add Package
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    <MudPaper Class="et-table-card" Elevation="0">
+        <div class="et-table-toolbar">
+            <div class="d-flex align-center gap-3 flex-wrap w-100">
+                <MudTextField T="string" @bind-Value="_searchString" Placeholder="Search package name..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="min-width: 260px; max-width: 420px; flex: 1;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                           OnClick="PerformSearch" StartIcon="@Icons.Material.Filled.Search">
+                    Search
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable T="TravelPackageResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
+                  Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px;">No.</MudTh>
+                @* <MudTh>Record ID</MudTh> *@
+                <MudTh>Package</MudTh>
+                <MudTh>Price</MudTh>
+                <MudTh>Discount</MudTh>
+                <MudTh>Duration</MudTh>
+                <MudTh>Includes</MudTh>
+                <MudTh>Dates</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
+                <MudTd DataLabel="Package">
+                    <MudText Style="font-weight: 700; color: #0F172A;">@context.PackageName</MudText>
+                </MudTd>
+                <MudTd DataLabel="Price" Style="font-weight: 700;">@context.PackagePrice.ToString("N0") mmk</MudTd>
+                <MudTd DataLabel="Discount">
+                    @if (context.DiscountPercentage > 0)
+                    {
+                        <span class="et-badge et-badge--warning">@context.DiscountPercentage% off</span>
+                    }
+                    else
+                    {
+                        <span style="color: #94A3B8;">—</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Duration">@context.DurationDays days</MudTd>
+                <MudTd DataLabel="Includes" Style="font-size: 0.85rem; color: #64748B;">
+                    <div>Bus: @(string.IsNullOrEmpty(context.BusName) ? "—" : context.BusName)</div>
+                    <div>Hotel: @(string.IsNullOrEmpty(context.HotelName) ? "—" : context.HotelName)</div>
+                </MudTd>
+                <MudTd DataLabel="Dates" Style="color: #64748B; font-size: 0.85rem;">
+                    @context.StartDate.ToString("dd-MM-yyyy") – @context.EndDate.ToString("dd-MM-yyyy")
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.PackageStatus == PackageStatus.Active)
+                    {
+                        <span class="et-badge et-badge--success">Active</span>
+                    }
+                    else if (context.PackageStatus == PackageStatus.Inactive)
+                    {
+                        <span class="et-badge et-badge--muted">Inactive</span>
+                    }
+                    else
+                    {
+                        <span class="et-badge et-badge--danger">Expired</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="et-action-btn et-action-btn--edit"
+                                   OnClick="@(() => OpenEditDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="et-action-btn et-action-btn--delete ml-1"
+                                   OnClick="@(() => OpenDeleteDialog(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="et-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.CardTravel" Size="Size.Large" Style="opacity: 0.4;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No packages found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Create a package to get started.</MudText>
+                </div>
+            </NoRecordsContent>
+            <LoadingContent>
+                <div class="pa-6 d-flex align-center gap-3">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                    <MudText>Loading packages...</MudText>
+                </div>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager InfoFormat="{first_item}-{last_item} of {all_items}" HorizontalAlignment="HorizontalAlignment.Right" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>

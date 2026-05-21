@@ -1,0 +1,19 @@
+<MudNavMenu Class="et-nav-menu" Color="Color.Primary">
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+    <MudNavLink Href="dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+
+    <MudNavGroup Title="Bus Management" Icon="@Icons.Material.Filled.DirectionsBus" Expanded="true">
+        <MudNavLink Href="bus-type" Icon="@Icons.Material.Filled.Category">Bus Types</MudNavLink>
+        <MudNavLink Href="bus" Icon="@Icons.Material.Filled.AirportShuttle">Buses</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Hotel Management" Icon="@Icons.Material.Filled.Hotel" Expanded="true">
+        <MudNavLink Href="hotel" Icon="@Icons.Material.Filled.Apartment">Hotels</MudNavLink>
+        <MudNavLink Href="hotel-room" Icon="@Icons.Material.Filled.MeetingRoom">Hotel Rooms</MudNavLink>
+        <MudNavLink Href="room-type" Icon="@Icons.Material.Filled.Category">Room Types</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavLink Href="travel-package" Icon="@Icons.Material.Filled.CardTravel">Travel Packages</MudNavLink>
+    <MudNavLink Href="bookings" Icon="@Icons.Material.Filled.ConfirmationNumber">Bookings</MudNavLink>
+    @* <MudNavLink Href="booking/create" Icon="@Icons.Material.Filled.EventNote">Create Booking</MudNavLink> *@
+</MudNavMenu>

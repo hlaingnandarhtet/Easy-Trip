@@ -1,0 +1,120 @@
+@page "/seat-map"
+@using MudBlazor
+
+
+
+<MudPaper Class="pa-6 rounded-lg" Elevation="4">
+    <MudText Typo="Typo.h5" Class="mb-4 text-center font-weight-bold">Select Your Seats</MudText>
+    
+    <div class="d-flex justify-center mb-6">
+        <div class="d-flex align-center mx-3">
+            <div class="seat available me-2" style="width:20px;height:20px;"></div> Available
+        </div>
+        <div class="d-flex align-center mx-3">
+            <div class="seat selected me-2" style="width:20px;height:20px;"></div> Selected
+        </div>
+        <div class="d-flex align-center mx-3">
+            <div class="seat reserved me-2" style="width:20px;height:20px;"></div> Booked / Unavailable
+        </div>
+    </div>
+
+    <div class="d-flex justify-center border-solid border-2 rounded-lg pa-6" style="border-color: var(--mud-palette-lines-default); background-color: #f9f9f9; width: max-content; margin: 0 auto;">
+        @if (BusLayoutMetadata == "Standard_2_2")
+        {
+            <div class="d-flex flex-column align-center">
+                <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" Size="Size.Large" Class="mb-6" Color="Color.Default" />
+                @for (int row = 1; row <= TotalRows; row++)
+                {
+                    <div class="d-flex mb-3">
+                        @RenderSeat($"A{row}")
+                        @RenderSeat($"B{row}")
+                        <div class="corridor"></div>
+                        @RenderSeat($"C{row}")
+                        @RenderSeat($"D{row}")
+                    </div>
+                }
+            </div>
+        }
+        else if (BusLayoutMetadata == "VIP_2_1")
+        {
+            <div class="d-flex flex-column align-center">
+                <MudIcon Icon="@Icons.Material.Filled.DirectionsBus" Size="Size.Large" Class="mb-6" Color="Color.Warning" />
+                @for (int row = 1; row <= TotalRows; row++)
+                {
+                    <div class="d-flex mb-3">
+                        @RenderSeat($"A{row}")
+                        @RenderSeat($"B{row}")
+                        <div class="corridor"></div>
+                        @RenderSeat($"C{row}")
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <MudDivider Class="my-6" />
+    
+    <div class="d-flex justify-space-between align-center px-4">
+        <div>
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Selected Seats</MudText>
+            <MudText Typo="Typo.h6" Class="font-weight-bold">
+                @(SelectedSeatsList.Any() ? string.Join(", ", SelectedSeatsList) : "None")
+            </MudText>
+        </div>
+        <div class="text-end">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Amount</MudText>
+            <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">$@TotalAmount</MudText>
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public string BusLayoutMetadata { get; set; } = "Standard_2_2";
+    [Parameter] public int TotalRows { get; set; } = 10;
+    [Parameter] public List<string> ReservedSeats { get; set; } = new();
+    [Parameter] public decimal PricePerSeat { get; set; } = 25.00m;
+    [Parameter] public EventCallback<List<string>> OnSeatsChanged { get; set; }
+    
+    public List<string> SelectedSeatsList { get; set; } = new();
+    public decimal TotalAmount => SelectedSeatsList.Count * PricePerSeat;
+
+    protected override void OnParametersSet()
+    {
+        SelectedSeatsList.RemoveAll(s => IsSeatReserved(s));
+    }
+
+    private bool IsSeatReserved(string seatId) =>
+        ReservedSeats.Contains(seatId, StringComparer.OrdinalIgnoreCase);
+
+    private async Task ToggleSeat(string seatId)
+    {
+        if (IsSeatReserved(seatId)) return;
+
+        if (SelectedSeatsList.Contains(seatId, StringComparer.OrdinalIgnoreCase))
+            SelectedSeatsList.RemoveAll(s => s.Equals(seatId, StringComparison.OrdinalIgnoreCase));
+        else
+            SelectedSeatsList.Add(seatId);
+
+        await OnSeatsChanged.InvokeAsync(SelectedSeatsList);
+    }
+
+    private string GetSeatClass(string seatId)
+    {
+        if (IsSeatReserved(seatId)) return "seat reserved";
+        if (SelectedSeatsList.Contains(seatId, StringComparer.OrdinalIgnoreCase)) return "seat selected";
+        return "seat available";
+    }
+
+    private RenderFragment RenderSeat(string seatId) => __builder =>
+    {
+        var reserved = IsSeatReserved(seatId);
+        <button type="button"
+                class="@GetSeatClass(seatId) mx-1 mud-elevation-1"
+                disabled="@reserved"
+                aria-disabled="@reserved"
+                title="@(reserved ? "Already booked" : $"Select seat {seatId}")"
+                @onclick="() => ToggleSeat(seatId)">
+            @seatId
+        </button>
+    };
+}
