@@ -3,6 +3,7 @@
 @using DotNet8.EasyTripBackendApi.Models
 @using DotNet8.EasyTripBackendApi.Shared
 @using System.Net.Http.Json
+@using System.Threading
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 
@@ -11,98 +12,149 @@
                 Subtitle="Confirm or reject customer bookings. Rejected bus bookings release seats."
                 Icon="@Icons.Material.Filled.ConfirmationNumber" />
 
-    <MudPaper Class="et-table-card pa-4" Elevation="0">
-        @if (_loading)
-        {
-            <div class="d-flex justify-center py-8">
-                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-            </div>
-        }
-        else
-        {
-            <MudTable Items="@_bookings" Hover="true" Dense="true" Elevation="0">
-                <HeaderContent>
-                    <MudTh>ID</MudTh>
-                    <MudTh>Customer</MudTh>
-                    <MudTh>Type</MudTh>
-                    <MudTh>Travel Date</MudTh>
-                    <MudTh>Seats / Qty</MudTh>
-                    <MudTh>Amount</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh Style="text-align: right;">Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>@context.Id</MudTd>
-                    <MudTd>@(context.UserName ?? "—")</MudTd>
-                    <MudTd>@context.BookingType</MudTd>
-                    <MudTd>@context.TravelDate.ToString("dd-MM-yyyy")</MudTd>
-                    <MudTd>
-                        @if (context.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
+    <MudPaper Class="et-table-card" Elevation="0">
+        <MudTable T="BookingResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
+                  Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
+            <HeaderContent>
+                <MudTh Style="width: 56px;">No.</MudTh>
+                @* <MudTh>ID</MudTh> *@
+                <MudTh>Customer</MudTh>
+                <MudTh>Type</MudTh>
+                <MudTh>Travel Date</MudTh>
+                <MudTh>Seats / Qty</MudTh>
+                <MudTh>Amount</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                @* <MudTd DataLabel="ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
+                <MudTd DataLabel="Customer">
+                    <div class="d-flex flex-column">
+                        <MudText Style="font-weight: 700; color: #0F172A;">@(context.UserName ?? "—")</MudText>
+                        @if (!string.IsNullOrWhiteSpace(context.UserEmail))
                         {
-                            @(context.Details?.SelectedSeats ?? "—")
+                            <span style="font-size: 0.75rem; color: #64748B;">@context.UserEmail</span>
                         }
-                        else
-                        {
-                            @(context.Details?.Quantity.ToString() ?? "—")
-                        }
-                    </MudTd>
-                    <MudTd>@context.TotalAmount.ToString("N0") mmk</MudTd>
-                    <MudTd>
-                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.BookingStatusCode)">
-                            @GetStatusLabel(context.BookingStatusCode)
-                        </MudChip>
-                    </MudTd>
-                    <MudTd Style="text-align: right;">
-                        @if (context.BookingStatusCode == BookingStatusCodes.Pending)
-                        {
-                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="me-1"
-                                       Disabled="@(_processingId == context.Id)"
-                                       OnClick="() => ConfirmBooking(context.Id)">
-                                Confirm
-                            </MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
-                                       Disabled="@(_processingId == context.Id)"
-                                       OnClick="() => RejectBooking(context.Id)">
-                                Reject
-                            </MudButton>
-                        }
-                        else
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
-                        }
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4">No bookings found.</MudText>
-                </NoRecordsContent>
-            </MudTable>
-        }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Type">
+                    <span class="et-badge et-badge--indigo">@context.BookingType</span>
+                </MudTd>
+                <MudTd DataLabel="Travel Date" Style="color: #64748B;">@context.TravelDate.ToString("dd-MM-yyyy")</MudTd>
+                <MudTd DataLabel="Seats / Qty">
+                    @if (context.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
+                    {
+                        @(context.Details?.SelectedSeats ?? "—")
+                    }
+                    else
+                    {
+                        @(context.Details?.Quantity.ToString() ?? "—")
+                    }
+                </MudTd>
+                <MudTd DataLabel="Amount" Style="font-weight: 700;">@context.TotalAmount.ToString("N0") mmk</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.BookingStatusCode == BookingStatusCodes.Pending)
+                    {
+                        <span class="et-badge et-badge--warning">Pending</span>
+                    }
+                    else if (context.BookingStatusCode == BookingStatusCodes.Confirmed)
+                    {
+                        <span class="et-badge et-badge--success">Confirmed</span>
+                    }
+                    else if (context.BookingStatusCode == BookingStatusCodes.Rejected)
+                    {
+                        <span class="et-badge et-badge--danger">Rejected</span>
+                    }
+                    else
+                    {
+                        <span class="et-badge et-badge--muted">Unknown</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    @if (context.BookingStatusCode == BookingStatusCodes.Pending)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="me-1 et-btn-primary"
+                                   Disabled="@(_processingId == context.Id)"
+                                   OnClick="() => ConfirmBooking(context.Id)">
+                            Confirm
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Style="border-radius: 10px; text-transform: none; font-weight: 600;"
+                                   Disabled="@(_processingId == context.Id)"
+                                   OnClick="() => RejectBooking(context.Id)">
+                            Reject
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <span style="color: #cbd5e1; font-size: 0.85rem;">—</span>
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="et-empty-state py-8">
+                    <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" Style="opacity: 0.3;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No bookings found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">There are no customer bookings in the database.</MudText>
+                </div>
+            </NoRecordsContent>
+            <LoadingContent>
+                <div class="pa-6 d-flex align-center gap-3">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                    <MudText>Loading bookings...</MudText>
+                </div>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager InfoFormat="{first_item}-{last_item} of {all_items}" HorizontalAlignment="HorizontalAlignment.Right" />
+            </PagerContent>
+        </MudTable>
     </MudPaper>
 </MudContainer>
 
 @code {
-    private bool _loading = true;
+    private MudTable<BookingResponseModel>? _table;
     private long? _processingId;
-    private List<BookingResponseModel> _bookings = new();
+    private List<BookingResponseModel> _bookingsList = new();
+    private int _totalCount;
+    private int _currentPage;
+    private int _pageSize;
 
-    protected override async Task OnInitializedAsync() => await LoadBookingsAsync();
-
-    private async Task LoadBookingsAsync()
+    private int GetRowNumber(BookingResponseModel context)
     {
-        _loading = true;
+        var index = _bookingsList.IndexOf(context);
+        if (index < 0) return 0;
+        return (_currentPage * _pageSize) + index + 1;
+    }
+
+    private async Task<TableData<BookingResponseModel>> LoadServerData(TableState state, CancellationToken token)
+    {
         try
         {
-            var response = await Http.GetFromJsonAsync<PaginationResponse<BookingResponseModel>>("api/booking?pageNo=1&pageSize=100");
-            _bookings = response?.Data?.ToList() ?? new();
+            var pageNo = state.Page + 1;
+            var pageSize = state.PageSize;
+            var url = $"api/booking?pageNo={pageNo}&pageSize={pageSize}";
+
+            var response = await Http.GetFromJsonAsync<PaginationResponse<BookingResponseModel>>(url);
+            if (response != null)
+            {
+                _bookingsList = response.Data.ToList();
+                _totalCount = response.TotalCount;
+                _currentPage = state.Page;
+                _pageSize = state.PageSize;
+
+                return new TableData<BookingResponseModel>
+                {
+                    TotalItems = response.TotalCount,
+                    Items = response.Data
+                };
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to load bookings: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading bookings: {ex.Message}", Severity.Error);
         }
-        finally
-        {
-            _loading = false;
-        }
+
+        return new TableData<BookingResponseModel> { TotalItems = 0, Items = Array.Empty<BookingResponseModel>() };
     }
 
     private async Task ConfirmBooking(long id)
@@ -114,7 +166,7 @@
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Booking confirmed.", Severity.Success);
-                await LoadBookingsAsync();
+                _table?.ReloadServerData();
             }
             else
             {
@@ -140,7 +192,7 @@
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Booking rejected. Bus seats are available again.", Severity.Info);
-                await LoadBookingsAsync();
+                _table?.ReloadServerData();
             }
             else
             {
@@ -156,20 +208,5 @@
             _processingId = null;
         }
     }
-
-    private static string GetStatusLabel(int statusCode) => statusCode switch
-    {
-        BookingStatusCodes.Pending => "Pending",
-        BookingStatusCodes.Confirmed => "Confirmed",
-        BookingStatusCodes.Rejected => "Rejected",
-        _ => "Unknown"
-    };
-
-    private static Color GetStatusColor(int statusCode) => statusCode switch
-    {
-        BookingStatusCodes.Pending => Color.Warning,
-        BookingStatusCodes.Confirmed => Color.Success,
-        BookingStatusCodes.Rejected => Color.Error,
-        _ => Color.Default
-    };
 }
+
