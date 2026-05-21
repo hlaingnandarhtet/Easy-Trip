@@ -21,6 +21,7 @@ namespace DotNet8.EasyTripBackend.Features.HotelRooms
         {
             return await _context.HotelRooms
                 .Where(hr => hr.HotelId == hotelId && hr.DeletedAt == null)
+                 .OrderBy(hr => hr.Id)
                 .Select(hr => new HotelRoomResponseModel
                 {
                     Id = hr.Id,

@@ -16,6 +16,17 @@ namespace DotNet8.EasyTripBackend
             // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddAuthorization();
+
+            // Add CORS policy
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowBlazorApp", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
             
             // Register DbContext and Services
             builder.Services.AddDbContext<DotNet8.EasyTripBackendApi.DbService.Models.AppDbContext>();
@@ -24,6 +35,7 @@ namespace DotNet8.EasyTripBackend
             builder.Services.AddScoped<IHotelRoomService, HotelRoomService>();
             builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
             builder.Services.AddScoped<ITravelPackageService, TravelPackageService>();
+            builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.BusTypes.IBusTypeService, DotNet8.EasyTripBackend.Features.BusTypes.BusTypeService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -40,6 +52,8 @@ namespace DotNet8.EasyTripBackend
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowBlazorApp");
 
             app.UseAuthorization();
             app.MapControllers();

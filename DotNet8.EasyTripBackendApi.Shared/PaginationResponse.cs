@@ -10,6 +10,8 @@ namespace DotNet8.EasyTripBackendApi.Shared
         public bool HasNextPage => PageNo < TotalPages;
         public bool HasPreviousPage => PageNo > 1;
 
+        public PaginationResponse() { }
+
         public PaginationResponse(List<T> data, int count, int pageNo, int pageSize)
         {
             Data = data;

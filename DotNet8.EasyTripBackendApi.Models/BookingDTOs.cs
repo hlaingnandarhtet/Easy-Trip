@@ -21,6 +21,13 @@ namespace DotNet8.EasyTripBackendApi.Models
         public BookingStatus BookingStatus { get; set; } = BookingStatus.Pending;
     }
 
+    public class PublicBookingRequestModel : BookingRequestModel
+    {
+        public string Name { get; set; } = null!;
+        public string Phone { get; set; } = null!;
+        public string Email { get; set; } = null!;
+    }
+
     public class BookingResponseModel
     {
         public long Id { get; set; }
@@ -35,6 +42,8 @@ namespace DotNet8.EasyTripBackendApi.Models
         public decimal TotalAmount { get; set; }
         public PaymentStatus PaymentStatus { get; set; }
         public BookingStatus BookingStatus { get; set; }
+        /// <summary>Raw DB status code (1=Pending, 2=Confirmed, 3=Rejected).</summary>
+        public int BookingStatusCode { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

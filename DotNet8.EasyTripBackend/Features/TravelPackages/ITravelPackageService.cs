@@ -6,7 +6,7 @@ namespace DotNet8.EasyTripBackend.Features.TravelPackages
 {
     public interface ITravelPackageService
     {
-        Task<PaginationResponse<TravelPackageResponseModel>> GetTravelPackagesAsync(int pageNo, int pageSize);
+        Task<PaginationResponse<TravelPackageResponseModel>> GetTravelPackagesAsync(int pageNo, int pageSize, string? search = null);
         Task<TravelPackageResponseModel?> GetTravelPackageAsync(long id);
         Task<TravelPackageResponseModel> CreateTravelPackageAsync(TravelPackageRequestModel request);
         Task<TravelPackageResponseModel?> UpdateTravelPackageAsync(long id, TravelPackageRequestModel request);

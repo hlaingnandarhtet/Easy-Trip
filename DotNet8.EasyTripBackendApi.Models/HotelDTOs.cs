@@ -26,6 +26,11 @@ namespace DotNet8.EasyTripBackendApi.Models
         public string? TypeName { get; set; }
     }
 
+    public class RoomTypeRequestModel
+    {
+        public string? TypeName { get; set; }
+    }
+
     public class HotelRoomRequestModel
     {
         public long? RoomTypeId { get; set; }

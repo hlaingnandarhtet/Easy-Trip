@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37216.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTripBackend", "DotNet8.EasyTripBackend.csproj", "{F48233F9-749D-33D1-6243-D76962F6F565}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTripBackendApi.DbService", "..\DotNet8.EasyTripBackendApi.DbService\DotNet8.EasyTripBackendApi.DbService.csproj", "{B54049BE-D1FB-D69C-BA4A-CE53615781F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTripBackendApi.Models", "..\DotNet8.EasyTripBackendApi.Models\DotNet8.EasyTripBackendApi.Models.csproj", "{0A061EA2-7496-C97F-0A44-5819016833D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTripBackendApi.Shared", "..\DotNet8.EasyTripBackendApi.Shared\DotNet8.EasyTripBackendApi.Shared.csproj", "{3FACD88B-B9DC-CA78-D6FF-8B2A24145FAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTrip.App", "..\DotNet8.EasyTrip.App\DotNet8.EasyTrip.App\DotNet8.EasyTrip.App.csproj", "{A3C9B990-916E-8081-2B04-0463192EAFBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNet8.EasyTrip.App.Client", "..\DotNet8.EasyTrip.App\DotNet8.EasyTrip.App.Client\DotNet8.EasyTrip.App.Client.csproj", "{F849F5E6-5193-FE9F-A26B-FB123C8CC4E0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F48233F9-749D-33D1-6243-D76962F6F565}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F48233F9-749D-33D1-6243-D76962F6F565}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F48233F9-749D-33D1-6243-D76962F6F565}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F48233F9-749D-33D1-6243-D76962F6F565}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B54049BE-D1FB-D69C-BA4A-CE53615781F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B54049BE-D1FB-D69C-BA4A-CE53615781F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B54049BE-D1FB-D69C-BA4A-CE53615781F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B54049BE-D1FB-D69C-BA4A-CE53615781F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A061EA2-7496-C97F-0A44-5819016833D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A061EA2-7496-C97F-0A44-5819016833D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A061EA2-7496-C97F-0A44-5819016833D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A061EA2-7496-C97F-0A44-5819016833D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FACD88B-B9DC-CA78-D6FF-8B2A24145FAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FACD88B-B9DC-CA78-D6FF-8B2A24145FAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FACD88B-B9DC-CA78-D6FF-8B2A24145FAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FACD88B-B9DC-CA78-D6FF-8B2A24145FAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3C9B990-916E-8081-2B04-0463192EAFBE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3C9B990-916E-8081-2B04-0463192EAFBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3C9B990-916E-8081-2B04-0463192EAFBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3C9B990-916E-8081-2B04-0463192EAFBE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F849F5E6-5193-FE9F-A26B-FB123C8CC4E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F849F5E6-5193-FE9F-A26B-FB123C8CC4E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F849F5E6-5193-FE9F-A26B-FB123C8CC4E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F849F5E6-5193-FE9F-A26B-FB123C8CC4E0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0430CF26-355E-4CC6-89F3-77CC1B141310}
+	EndGlobalSection
+EndGlobal

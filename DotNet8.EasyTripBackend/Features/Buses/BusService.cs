@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DotNet8.EasyTripBackendApi.DbService.Models;
 using DotNet8.EasyTripBackendApi.Shared;
+using DotNet8.EasyTripBackendApi.Models;
 
 namespace DotNet8.EasyTripBackend.Features.Bus
 {
@@ -16,37 +17,47 @@ namespace DotNet8.EasyTripBackend.Features.Bus
             _context = context;
         }
 
-        public async Task<PaginationResponse<BusResponseModel>> GetBusesAsync(int pageNo, int pageSize)
+        public async Task<PaginationResponse<BusResponseModel>> GetBusesAsync(int pageNo, int pageSize, string? search = null)
         {
             var query = _context.Buses
-                .Where(b => b.DeletedAt == null)
-                .Select(b => new BusResponseModel
-                {
-                    Id = b.Id,
-                    BusName = b.BusName,
-                    BusNumber = b.BusNumber,
-                    BusClass = b.BusClass,
-                    TotalSeats = b.TotalSeats,
-                    Price = b.Price,
-                    StartPoint = b.StartPoint,
-                    EndPoint = b.EndPoint,
-                    Departure = b.Departure,
-                    Arrival = b.Arrival,
-                    DriverName = b.DriverName,
-                    TripType = b.TripType,
-                    TimeSlot = b.TimeSlot,
-                    BusStatus = b.BusStatus,
-                    CreatedAt = b.CreatedAt,
-                    DeletedAt = b.DeletedAt
-                })
-                .OrderByDescending(b => b.Id);
+                .Include(b => b.BusType)
+                .Where(b => b.DeletedAt == null);
 
-            return await query.ToPagedListAsync(pageNo, pageSize);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(b => b.BusName.Contains(search) || b.BusNumber.Contains(search));
+            }
+
+            var projectedQuery = query.Select(b => new BusResponseModel
+            {
+                Id = b.Id,
+                BusName = b.BusName,
+                BusNumber = b.BusNumber,
+                BusClass = b.BusClass,
+                TotalSeats = b.TotalSeats,
+                Price = b.Price,
+                StartPoint = b.StartPoint,
+                EndPoint = b.EndPoint,
+                Departure = b.Departure,
+                Arrival = b.Arrival,
+                DriverName = b.DriverName,
+                TripType = b.TripType,
+                TimeSlot = b.TimeSlot,
+                BusStatus = b.BusStatus,
+                CreatedAt = b.CreatedAt,
+                DeletedAt = b.DeletedAt,
+                BusTypeId = b.BusTypeId,
+                BusTypeName = b.BusType != null ? b.BusType.TypeName : null
+            })
+            .OrderByDescending(b => b.Id);
+
+            return await projectedQuery.ToPagedListAsync(pageNo, pageSize);
         }
 
         public async Task<BusResponseModel?> GetBusById(long id)
         {
             var bus = await _context.Buses
+                .Include(b => b.BusType)
                 .Where(b => b.Id == id && b.DeletedAt == null)
                 .Select(b => new BusResponseModel
                 {
@@ -65,7 +76,9 @@ namespace DotNet8.EasyTripBackend.Features.Bus
                     TimeSlot = b.TimeSlot,
                     BusStatus = b.BusStatus,
                     CreatedAt = b.CreatedAt,
-                    DeletedAt = b.DeletedAt
+                    DeletedAt = b.DeletedAt,
+                    BusTypeId = b.BusTypeId,
+                    BusTypeName = b.BusType != null ? b.BusType.TypeName : null
                 })
                 .FirstOrDefaultAsync();
 
@@ -74,9 +87,19 @@ namespace DotNet8.EasyTripBackend.Features.Bus
 
         public async Task<BusResponseModel> CreateBusAsync(BusRequestModel request)
         {
+            var busTypeName = "";
+            if (request.BusTypeId.HasValue)
+            {
+                var bt = await _context.BusTypes.FindAsync(request.BusTypeId.Value);
+                if (bt != null)
+                {
+                    busTypeName = bt.TypeName;
+                }
+            }
+
             var newBus = new DotNet8.EasyTripBackendApi.DbService.Models.Bus
             {
-                BusName = request.BusName ?? "",
+                BusName = !string.IsNullOrEmpty(busTypeName) ? busTypeName : (request.BusName ?? ""),
                 BusNumber = request.BusNumber ?? "",
                 BusClass = request.BusClass ?? "",
                 TotalSeats = request.TotalSeats ?? 0,
@@ -89,6 +112,7 @@ namespace DotNet8.EasyTripBackend.Features.Bus
                 TripType = request.TripType ?? "",
                 TimeSlot = request.TimeSlot ?? "",
                 BusStatus = request.BusStatus,
+                BusTypeId = request.BusTypeId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -103,7 +127,20 @@ namespace DotNet8.EasyTripBackend.Features.Bus
             var existingBus = await _context.Buses.FirstOrDefaultAsync(b => b.Id == id && b.DeletedAt == null);
             if (existingBus == null) return null;
 
-            existingBus.BusName = request.BusName ?? existingBus.BusName;
+            if (request.BusTypeId.HasValue)
+            {
+                existingBus.BusTypeId = request.BusTypeId.Value;
+                var bt = await _context.BusTypes.FindAsync(request.BusTypeId.Value);
+                if (bt != null)
+                {
+                    existingBus.BusName = bt.TypeName;
+                }
+            }
+            else if (request.BusName != null)
+            {
+                existingBus.BusName = request.BusName;
+            }
+
             existingBus.BusNumber = request.BusNumber ?? existingBus.BusNumber;
             existingBus.BusClass = request.BusClass ?? existingBus.BusClass;
             if (request.TotalSeats.HasValue) existingBus.TotalSeats = request.TotalSeats.Value;
@@ -140,6 +177,7 @@ namespace DotNet8.EasyTripBackend.Features.Bus
         public async Task<BusResponseModel?> GetBusAsync(long id)
         {
             var bus = await _context.Buses
+                                    .Include(b => b.BusType)
                                     .FirstOrDefaultAsync(b => b.Id == id && b.DeletedAt == null);
 
             if (bus == null) return null;
@@ -158,7 +196,9 @@ namespace DotNet8.EasyTripBackend.Features.Bus
                 DriverName = bus.DriverName,
                 TripType = bus.TripType,
                 TimeSlot = bus.TimeSlot,
-                BusStatus = bus.BusStatus
+                BusStatus = bus.BusStatus,
+                BusTypeId = bus.BusTypeId,
+                BusTypeName = bus.BusType?.TypeName
             };
         }
     }

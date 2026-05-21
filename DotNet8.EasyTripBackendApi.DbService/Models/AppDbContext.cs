@@ -23,6 +23,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<BusSeat> BusSeats { get; set; }
 
+    public virtual DbSet<BusType> BusTypes { get; set; }
+
     public virtual DbSet<Hotel> Hotels { get; set; }
 
     public virtual DbSet<HotelRoom> HotelRooms { get; set; }
@@ -187,6 +189,26 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.TripType)
                 .HasMaxLength(50)
                 .HasColumnName("trip_type");
+            entity.Property(e => e.BusTypeId).HasColumnName("bus_type_id");
+
+            entity.HasOne(d => d.BusType).WithMany(p => p.Buses)
+                .HasForeignKey(d => d.BusTypeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("buses_bus_type_id_fkey");
+        });
+
+        modelBuilder.Entity<BusType>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("bus_types_pkey");
+
+            entity.ToTable("bus_types");
+
+            entity.Property(e => e.Id)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("id");
+            entity.Property(e => e.TypeName)
+                .HasMaxLength(100)
+                .HasColumnName("type_name");
         });
 
         modelBuilder.Entity<BusSeat>(entity =>
@@ -361,6 +383,12 @@ public partial class AppDbContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValueSql("'customer'::character varying")
                 .HasColumnName("role");
+            entity.Property(e => e.Phone)
+                .HasMaxLength(50)
+                .HasColumnName("phone");
+            entity.Property(e => e.AccountStatus)
+                .HasMaxLength(50)
+                .HasColumnName("account_status");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnName("updated_at");

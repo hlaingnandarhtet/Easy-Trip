@@ -17,36 +17,42 @@ namespace DotNet8.EasyTripBackend.Features.Hotels
             _context = context;
         }
 
-        public async Task<PaginationResponse<HotelResponseModel>> GetHotelsAsync(int pageNo, int pageSize)
+        public async Task<PaginationResponse<HotelResponseModel>> GetHotelsAsync(int pageNo, int pageSize, string? search = null)
         {
             var query = _context.Hotels
-                .Where(h => h.DeletedAt == null)
-                .Select(h => new HotelResponseModel
-                {
-                    Id = h.Id,
-                    HotelName = h.HotelName,
-                    Location = h.Location,
-                    CreatedAt = h.CreatedAt,
-                    DeletedAt = h.DeletedAt,
-                    HotelRooms = h.HotelRooms
-                        .Where(hr => hr.DeletedAt == null)
-                        .Select(hr => new HotelRoomResponseModel
-                        {
-                            Id = hr.Id,
-                            HotelId = hr.HotelId,
-                            RoomTypeId = hr.RoomTypeId,
-                            RoomTypeName = hr.RoomType != null ? hr.RoomType.TypeName : null,
-                            PricePerNight = hr.PricePerNight,
-                            Amenities = hr.Amenities,
-                            AvailableRooms = hr.AvailableRooms,
-                            HotelStatus = (HotelStatus)(hr.HotelStatus ?? 0),
-                            CreatedAt = hr.CreatedAt,
-                            DeletedAt = hr.DeletedAt
-                        }).ToList()
-                })
-                .OrderByDescending(h => h.Id);
+                .Where(h => h.DeletedAt == null);
 
-            return await query.ToPagedListAsync(pageNo, pageSize);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(h => h.HotelName.Contains(search) || h.Location.Contains(search));
+            }
+
+            var projectedQuery = query.Select(h => new HotelResponseModel
+            {
+                Id = h.Id,
+                HotelName = h.HotelName,
+                Location = h.Location,
+                CreatedAt = h.CreatedAt,
+                DeletedAt = h.DeletedAt,
+                HotelRooms = h.HotelRooms
+                    .Where(hr => hr.DeletedAt == null)
+                    .Select(hr => new HotelRoomResponseModel
+                    {
+                        Id = hr.Id,
+                        HotelId = hr.HotelId,
+                        RoomTypeId = hr.RoomTypeId,
+                        RoomTypeName = hr.RoomType != null ? hr.RoomType.TypeName : null,
+                        PricePerNight = hr.PricePerNight,
+                        Amenities = hr.Amenities,
+                        AvailableRooms = hr.AvailableRooms,
+                        HotelStatus = (HotelStatus)(hr.HotelStatus ?? 0),
+                        CreatedAt = hr.CreatedAt,
+                        DeletedAt = hr.DeletedAt
+                    }).ToList()
+            })
+            .OrderByDescending(h => h.Id);
+
+            return await projectedQuery.ToPagedListAsync(pageNo, pageSize);
         }
 
         public async Task<HotelResponseModel?> GetHotelById(long id)
@@ -158,7 +164,7 @@ namespace DotNet8.EasyTripBackend.Features.Hotels
 
         public Task<HotelResponseModel?> GetHotelAsync(long id)
         {
-            throw new NotImplementedException();
+            return GetHotelById(id);
         }
     }
 }

@@ -17,12 +17,12 @@ namespace DotNet8.EasyTripBackend.Features.Hotels
         }
 
         [HttpGet]
-        public async Task<ActionResult<PaginationResponse<HotelResponseModel>>> GetHotels([FromQuery] int pageNo = 1, [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<PaginationResponse<HotelResponseModel>>> GetHotels([FromQuery] int pageNo = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
         {
             if (pageNo < 1) pageNo = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var result = await _hotelService.GetHotelsAsync(pageNo, pageSize);
+            var result = await _hotelService.GetHotelsAsync(pageNo, pageSize, search);
             return Ok(result);
         }
 

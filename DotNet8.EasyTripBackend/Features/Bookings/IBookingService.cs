@@ -13,6 +13,11 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
         Task<BookingResponseModel?> UpdateBookingAsync(long id, BookingRequestModel request);
         Task<BookingResponseModel?> UpdatePaymentAndBookingStatusAsync(long id, int paymentStatus, int bookingStatus);
         Task<bool> DeleteBookingAsync(long id);
+        Task<BookingResponseModel> CreatePublicBookingAsync(PublicBookingRequestModel request);
+        Task<BookingResponseModel?> ConfirmBookingAsync(long id);
+        Task<BookingResponseModel?> RejectBookingAsync(long id);
+        Task<List<string>> GetReservedSeatsForBusAsync(long busId, DateOnly travelDate);
+        Task<List<BookingResponseModel>> GetBookingsByPhoneAsync(string phone);
     }
 }
 

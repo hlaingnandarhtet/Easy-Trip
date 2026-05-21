@@ -19,6 +19,10 @@ namespace DotNet8.EasyTripBackend
                 using (var cmd = context.Database.GetDbConnection().CreateCommand())
                 {
                     cmd.CommandText = @"
+                        -- Add phone and account_status to users if missing
+                        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50) NULL;
+                        ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(50) NULL;
+
                         -- Add updated_at to bookings if missing
                         ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NULL;
 
@@ -41,6 +45,25 @@ namespace DotNet8.EasyTripBackend
                             CONSTRAINT fk_booking_details_hotel_room FOREIGN KEY (hotel_room_id) REFERENCES hotel_rooms(id) ON DELETE SET NULL,
                             CONSTRAINT fk_booking_details_package FOREIGN KEY (package_id) REFERENCES travel_packages(id) ON DELETE SET NULL
                         );
+
+                        -- Create bus_types table if not exists
+                        CREATE TABLE IF NOT EXISTS bus_types (
+                            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                            type_name VARCHAR(100) NOT NULL
+                        );
+
+                        -- Add bus_type_id to buses
+                        ALTER TABLE buses ADD COLUMN IF NOT EXISTS bus_type_id BIGINT NULL;
+                        
+                        -- Add foreign key constraint safely
+                        DO $$
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM pg_constraint WHERE conname = 'buses_bus_type_id_fkey'
+                            ) THEN
+                                ALTER TABLE buses ADD CONSTRAINT buses_bus_type_id_fkey FOREIGN KEY (bus_type_id) REFERENCES bus_types(id) ON DELETE SET NULL;
+                            END IF;
+                        END $$;
                     ";
                     await cmd.ExecuteNonQueryAsync();
                 }

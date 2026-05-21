@@ -85,6 +85,60 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             if (!success) return NotFound("Booking not found");
             return NoContent();
         }
+
+        [HttpGet("/api/public/bookings/by-phone/{phone}")]
+        public async Task<ActionResult<List<BookingResponseModel>>> GetBookingsByPhone(string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return BadRequest("Phone number is required.");
+
+            var result = await _bookingService.GetBookingsByPhoneAsync(phone);
+            return Ok(result);
+        }
+
+        [HttpPost("/api/public/bookings")]
+        public async Task<ActionResult<BookingResponseModel>> CreatePublicBooking([FromBody] PublicBookingRequestModel request)
+        {
+            try
+            {
+                var result = await _bookingService.CreatePublicBookingAsync(request);
+                return CreatedAtAction(nameof(GetBooking), new { id = result.Id }, result);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("/api/admin/bookings/confirm/{id}")]
+        public async Task<ActionResult<BookingResponseModel>> ConfirmBooking(long id)
+        {
+            try
+            {
+                var result = await _bookingService.ConfirmBookingAsync(id);
+                if (result == null) return NotFound("Booking not found");
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("/api/admin/bookings/reject/{id}")]
+        public async Task<ActionResult<BookingResponseModel>> RejectBooking(long id)
+        {
+            try
+            {
+                var result = await _bookingService.RejectBookingAsync(id);
+                if (result == null) return NotFound("Booking not found");
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 
     public class UpdateBookingStatusRequest

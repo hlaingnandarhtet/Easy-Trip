@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DotNet8.EasyTripBackendApi.DbService.Models;
@@ -40,4 +40,8 @@ public partial class Bus
     public virtual ICollection<BusSeat> BusSeats { get; set; } = new List<BusSeat>();
 
     public virtual ICollection<TravelPackage> TravelPackages { get; set; } = new List<TravelPackage>();
+
+    public long? BusTypeId { get; set; }
+
+    public virtual BusType? BusType { get; set; }
 }

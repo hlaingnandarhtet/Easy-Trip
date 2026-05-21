@@ -6,7 +6,7 @@ namespace DotNet8.EasyTripBackend.Features.Hotels
 {
     public interface IHotelService
     {
-        Task<PaginationResponse<HotelResponseModel>> GetHotelsAsync(int pageNo, int pageSize);
+        Task<PaginationResponse<HotelResponseModel>> GetHotelsAsync(int pageNo, int pageSize, string? search = null);
         Task<HotelResponseModel?> GetHotelAsync(long id);
         Task<HotelResponseModel> CreateHotelAsync(HotelRequestModel request);
         Task<HotelResponseModel?> UpdateHotelAsync(long id, HotelRequestModel request);

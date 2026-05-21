@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,48 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             _context = context;
         }
 
+        private static List<string> ParseSeatList(string? seats) =>
+            string.IsNullOrWhiteSpace(seats)
+                ? new List<string>()
+                : seats.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim().ToUpperInvariant())
+                    .ToList();
+
+        private async Task<List<string>> GetOccupiedSeatsAsync(long busId, DateOnly travelDate, long? excludeBookingId = null)
+        {
+            var seatStrings = await (
+                from bd in _context.BookingDetails
+                join b in _context.Bookings on bd.BookingId equals b.Id
+                where bd.BusId == busId
+                      && bd.TravelDate == travelDate
+                      && b.DeletedAt == null
+                      && b.BookingStatus != null
+                      && BookingStatusCodes.SeatBlockingStatuses.Contains(b.BookingStatus.Value)
+                      && (excludeBookingId == null || b.Id != excludeBookingId.Value)
+                select bd.SelectedSeats
+            ).ToListAsync();
+
+            return seatStrings
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .SelectMany(s => s!.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                .Select(s => s.Trim().ToUpperInvariant())
+                .Distinct()
+                .ToList();
+        }
+
+        private static void EnsureNoSeatConflict(IReadOnlyList<string> requested, IReadOnlyList<string> occupied)
+        {
+            var conflicting = requested
+                .Intersect(occupied, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (conflicting.Count > 0)
+            {
+                throw new Exception(
+                    $"The following seats have just been booked by another user: {string.Join(", ", conflicting)}. Please select different seats.");
+            }
+        }
+
         public async Task<PaginationResponse<BookingResponseModel>> GetBookingsAsync(int pageNo, int pageSize)
         {
             var totalCount = await _context.Bookings.CountAsync(b => b.DeletedAt == null);
@@ -26,7 +69,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 .Include(b => b.User)
                 .Include(b => b.BookingDetails)
                 .Where(b => b.DeletedAt == null)
-                .OrderByDescending(b => b.Id)
+                .OrderBy(b => b.Id)
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -108,6 +151,13 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                     var busExists = await _context.Buses.AnyAsync(b => b.Id == request.BusId.Value && b.DeletedAt == null);
                     if (!busExists)
                         throw new Exception("Bus not found");
+
+                    if (!string.IsNullOrEmpty(request.SelectedSeats))
+                    {
+                        var requestedSeats = ParseSeatList(request.SelectedSeats);
+                        var occupiedSeats = await GetOccupiedSeatsAsync(request.BusId.Value, request.TravelDate);
+                        EnsureNoSeatConflict(requestedSeats, occupiedSeats);
+                    }
                 }
                 else if (request.BookingType.Equals("Package", StringComparison.OrdinalIgnoreCase) || 
                          request.BookingType.Equals("TravelPackage", StringComparison.OrdinalIgnoreCase))
@@ -293,7 +343,187 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             return true;
         }
 
-        private async Task<List<BookingResponseModel>> MapBookingsAsync(List<Booking> bookings)
+        public async Task<List<string>> GetReservedSeatsForBusAsync(long busId, DateOnly travelDate)
+        {
+            return await GetOccupiedSeatsAsync(busId, travelDate);
+        }
+
+        public async Task<List<BookingResponseModel>> GetBookingsByPhoneAsync(string phone)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Phone == phone && u.DeletedAt == null);
+
+            if (user == null)
+                return new List<BookingResponseModel>();
+
+            var bookings = await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.BookingDetails)
+                .Where(b => b.UserId == user.Id && b.DeletedAt == null)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+
+            return await MapBookingsAsync(bookings);
+        }
+
+        public async Task<BookingResponseModel> CreatePublicBookingAsync(PublicBookingRequestModel request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                // 1 & 2 & 3. Check Users table by Phone or Email to avoid unique constraint violations
+                var user = await _context.Users.FirstOrDefaultAsync(u => (u.Phone == request.Phone || u.Email == request.Email) && u.DeletedAt == null);
+                if (user == null)
+                {
+                    user = new DotNet8.EasyTripBackendApi.DbService.Models.User
+                    {
+                        Name = request.Name,
+                        Phone = request.Phone,
+                        Email = request.Email,
+                        Role = "Customer",
+                        AccountStatus = "Inactive/PendingApproval",
+                        Password = "GeneratedPassword123!", // Dummy password for now or generated
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Business logic check based on BookingType
+                if (request.BookingType.Equals("Hotel", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!request.HotelRoomId.HasValue)
+                        throw new Exception("HotelRoomId is required for Hotel bookings.");
+                    
+                    var room = await _context.HotelRooms.FirstOrDefaultAsync(hr => hr.Id == request.HotelRoomId.Value && hr.DeletedAt == null);
+                    if (room == null) throw new Exception("Hotel Room not found");
+                    if (room.AvailableRooms < request.Quantity)
+                        throw new Exception($"Requested quantity ({request.Quantity}) exceeds available rooms ({room.AvailableRooms}).");
+                    
+                    room.AvailableRooms -= request.Quantity;
+                    if (room.AvailableRooms == 0) room.HotelStatus = 1;
+                    room.UpdatedAt = DateTime.UtcNow;
+                    _context.HotelRooms.Update(room);
+                }
+                else if (request.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!request.BusId.HasValue) throw new Exception("BusId is required for Bus bookings.");
+                    var busExists = await _context.Buses.AnyAsync(b => b.Id == request.BusId.Value && b.DeletedAt == null);
+                    if (!busExists) throw new Exception("Bus not found");
+
+                    if (!string.IsNullOrEmpty(request.SelectedSeats))
+                    {
+                        var requestedSeats = ParseSeatList(request.SelectedSeats);
+                        var occupiedSeats = await GetOccupiedSeatsAsync(request.BusId.Value, request.TravelDate);
+                        EnsureNoSeatConflict(requestedSeats, occupiedSeats);
+                    }
+                }
+                else if (request.BookingType.Equals("Package", StringComparison.OrdinalIgnoreCase) || request.BookingType.Equals("TravelPackage", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!request.PackageId.HasValue) throw new Exception("PackageId is required for Package bookings.");
+                    var packageExists = await _context.TravelPackages.AnyAsync(tp => tp.Id == request.PackageId.Value && tp.DeletedAt == null);
+                    if (!packageExists) throw new Exception("Travel Package not found");
+                }
+                else
+                {
+                    throw new Exception("Invalid BookingType. Must be 'Bus', 'Hotel', or 'Package'");
+                }
+
+                // 4. Create the Booking and BookingDetail
+                var newBooking = new DotNet8.EasyTripBackendApi.DbService.Models.Booking
+                {
+                    UserId = user.Id,
+                    BookingType = request.BookingType,
+                    ItemId = request.HotelRoomId ?? request.BusId ?? request.PackageId,
+                    BookingDate = DateTime.UtcNow,
+                    TravelDate = request.TravelDate,
+                    TotalAmount = request.TotalAmount,
+                    PaymentStatus = (int)PaymentStatus.Unpaid,
+                    BookingStatus = BookingStatusCodes.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Bookings.Add(newBooking);
+                await _context.SaveChangesAsync();
+
+                var newBookingDetail = new DotNet8.EasyTripBackendApi.DbService.Models.BookingDetail
+                {
+                    BookingId = newBooking.Id,
+                    BusId = request.BusId,
+                    HotelRoomId = request.HotelRoomId,
+                    PackageId = request.PackageId,
+                    SelectedSeats = request.SelectedSeats,
+                    Quantity = request.Quantity,
+                    TravelDate = request.TravelDate,
+                    EndDate = request.EndDate
+                };
+
+                _context.BookingDetails.Add(newBookingDetail);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return await GetBookingByIdAsync(newBooking.Id) ?? throw new Exception("Failed to retrieve created booking details.");
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<BookingResponseModel?> RejectBookingAsync(long id)
+        {
+            var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id && b.DeletedAt == null);
+            if (existingBooking == null) return null;
+
+            existingBooking.BookingStatus = BookingStatusCodes.Rejected;
+            existingBooking.UpdatedAt = DateTime.UtcNow;
+            _context.Bookings.Update(existingBooking);
+            await _context.SaveChangesAsync();
+
+            return await GetBookingByIdAsync(id);
+        }
+
+        public async Task<BookingResponseModel?> ConfirmBookingAsync(long id)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id && b.DeletedAt == null);
+                if (existingBooking == null) return null;
+
+                existingBooking.BookingStatus = BookingStatusCodes.Confirmed;
+                existingBooking.UpdatedAt = DateTime.UtcNow;
+                _context.Bookings.Update(existingBooking);
+
+                // Update linked User AccountStatus to "Active"
+                if (existingBooking.UserId.HasValue)
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == existingBooking.UserId.Value);
+                    if (user != null)
+                    {
+                        user.AccountStatus = "Active";
+                        user.UpdatedAt = DateTime.UtcNow;
+                        _context.Users.Update(user);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return await GetBookingByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private async Task<List<BookingResponseModel>> MapBookingsAsync(List<DotNet8.EasyTripBackendApi.DbService.Models.Booking> bookings)
         {
             if (bookings == null || !bookings.Any())
                 return new List<BookingResponseModel>();
@@ -411,6 +641,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                     TotalAmount = b.TotalAmount,
                     PaymentStatus = (PaymentStatus)(b.PaymentStatus ?? 0),
                     BookingStatus = (BookingStatus)(b.BookingStatus ?? 0),
+                    BookingStatusCode = b.BookingStatus ?? 0,
                     CreatedAt = b.CreatedAt,
                     UpdatedAt = b.UpdatedAt,
                     DeletedAt = b.DeletedAt,

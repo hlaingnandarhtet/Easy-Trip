@@ -18,10 +18,10 @@ namespace DotNet8.EasyTripBackend.Features.TravelPackages
             _context = context;
         }
 
-        public async Task<PaginationResponse<TravelPackageResponseModel>> GetTravelPackagesAsync(int pageNo, int pageSize)
+        public async Task<PaginationResponse<TravelPackageResponseModel>> GetTravelPackagesAsync(int pageNo, int pageSize, string? search = null)
         {
             var query = from tp in _context.TravelPackages
-                        where tp.DeletedAt == null
+                        where tp.DeletedAt == null && (string.IsNullOrEmpty(search) || tp.PackageName.Contains(search))
                         join b in _context.Buses on tp.BusId equals b.Id into busJoin
                         from b in busJoin.DefaultIfEmpty()
                         join h in _context.Hotels on tp.HotelId equals h.Id into hotelJoin

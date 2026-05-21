@@ -1,6 +1,6 @@
 using System;
 
-namespace DotNet8.EasyTripBackend.Features.Bus
+namespace DotNet8.EasyTripBackendApi.Models
 {
     public class BusRequestModel
     {
@@ -17,6 +17,7 @@ namespace DotNet8.EasyTripBackend.Features.Bus
         public string? TripType { get; set; }
         public string? TimeSlot { get; set; }
         public int? BusStatus { get; set; }
+        public long? BusTypeId { get; set; }
     }
 
     public class BusResponseModel
@@ -37,5 +38,7 @@ namespace DotNet8.EasyTripBackend.Features.Bus
         public int? BusStatus { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
+        public long? BusTypeId { get; set; }
+        public string? BusTypeName { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DotNet8.EasyTripBackendApi.DbService.Models;
@@ -14,6 +14,10 @@ public partial class User
     public string Password { get; set; } = null!;
 
     public string? Role { get; set; }
+
+    public string? Phone { get; set; }
+
+    public string? AccountStatus { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
