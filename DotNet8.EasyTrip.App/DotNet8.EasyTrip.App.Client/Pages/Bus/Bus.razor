@@ -35,8 +35,6 @@
         <MudTable T="BusResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
                   Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
             <HeaderContent>
-                <MudTh Style="width: 56px;">No.</MudTh>
-                @* <MudTh>Record ID</MudTh> *@
                 <MudTh>Bus Name</MudTh>
                 <MudTh>Number</MudTh>
                 <MudTh>Class</MudTh>
@@ -50,7 +48,6 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
-                @* <MudTd DataLabel="Record ID"><span class="et-badge et-badge--muted">#@context.Id</span></MudTd> *@
                 <MudTd DataLabel="Bus Name">
                     <MudText Style="font-weight: 700; color: #0F172A;">@context.BusName</MudText>
                 </MudTd>

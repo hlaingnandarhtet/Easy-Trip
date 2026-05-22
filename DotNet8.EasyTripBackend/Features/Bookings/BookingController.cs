@@ -23,13 +23,26 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             [FromQuery] string? name = null,
             [FromQuery] string? type = null,
             [FromQuery] int? status = null,
+            [FromQuery] int? paymentStatus = null,
             [FromQuery] DateOnly? startDate = null,
-            [FromQuery] DateOnly? endDate = null)
+            [FromQuery] DateOnly? endDate = null,
+            [FromQuery] bool filterByCreatedDate = false,
+            [FromQuery] bool newestFirst = false)
         {
             if (pageNo < 1) pageNo = 1;
             if (pageSize < 1) pageSize = 10;
 
-            var result = await _bookingService.GetBookingsAsync(pageNo, pageSize, name, type, status, startDate, endDate);
+            var result = await _bookingService.GetBookingsAsync(
+                pageNo,
+                pageSize,
+                name,
+                type,
+                status,
+                paymentStatus,
+                startDate,
+                endDate,
+                filterByCreatedDate,
+                newestFirst);
             return Ok(result);
         }
 

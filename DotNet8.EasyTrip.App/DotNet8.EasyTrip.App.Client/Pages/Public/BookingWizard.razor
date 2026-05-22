@@ -192,8 +192,7 @@
                         string rSize = "22 m² / 237 ft²";
                         string rGuests = "Max 2 adults";
                         string rBeds = "1 Double Bed";
-                        string rView = "City View";
-                        
+
                         if (room.RoomTypeName != null)
                         {
                             if (room.RoomTypeName.Contains("Twin", StringComparison.OrdinalIgnoreCase))
@@ -201,30 +200,27 @@
                                 rSize = "21 m² / 226 ft²";
                                 rGuests = "Max 2 adults";
                                 rBeds = "2 Single Beds";
-                                rView = "City View";
                             }
                             else if (room.RoomTypeName.Contains("Deluxe", StringComparison.OrdinalIgnoreCase) || 
-                                     room.RoomTypeName.Contains("Double", StringComparison.OrdinalIgnoreCase))
+                             room.RoomTypeName.Contains("Double", StringComparison.OrdinalIgnoreCase))
                             {
                                 rSize = "28 m² / 301 ft²";
                                 rGuests = "Max 2 adults";
                                 rBeds = "1 Queen Bed";
-                                rView = "Skyline View";
                             }
                             else if (room.RoomTypeName.Contains("Family", StringComparison.OrdinalIgnoreCase))
                             {
                                 rSize = "36 m² / 387 ft²";
                                 rGuests = "Max 4 adults";
                                 rBeds = "2 Double Beds";
-                                rView = "Pool/City View";
                             }
                             else if (room.RoomTypeName.Contains("Suite", StringComparison.OrdinalIgnoreCase))
                             {
                                 rSize = "48 m² / 516 ft²";
                                 rGuests = "Max 2 adults (1 child)";
                                 rBeds = "1 King Bed";
-                                rView = "Panoramic City View";
                             }
+
                         }
 
                         // Determine slide index for room-level slideshow

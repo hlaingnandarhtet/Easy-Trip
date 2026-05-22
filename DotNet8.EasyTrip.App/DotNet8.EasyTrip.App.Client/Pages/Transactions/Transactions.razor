@@ -1,18 +1,18 @@
-@page "/bookings"
+@page "/transactions"
 @inherits ComponentBase
 @rendermode InteractiveWebAssembly
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
-    <PageHeader Title="Booking Management"
-                Subtitle="Confirm or reject customer bookings. Rejected bus bookings release seats."
-                Icon="@Icons.Material.Filled.ConfirmationNumber" />
+    <PageHeader Title="Transaction Management"
+                Subtitle="Unpaid transactions — use the arrow to expand and view details."
+                Icon="@Icons.Material.Filled.Payments" />
 
     <MudPaper Class="et-table-card" Elevation="0">
         <div class="et-table-toolbar">
             <div class="d-flex align-end gap-3 flex-wrap w-100">
                 <div style="flex: 2 1 250px; min-width: 200px;">
-                    <MudTextField T="string" @bind-Value="_searchName" Label="Customer Name or Email"
-                                  Placeholder="Search name or email..." Adornment="Adornment.Start"
+                    <MudTextField T="string" @bind-Value="_searchName" Label="Customer Name, Email or TXN ID"
+                                  Placeholder="Search customer or TXN-..." Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
                                   Margin="Margin.Dense" Immediate="false" Clearable="true" />
                 </div>
@@ -22,14 +22,6 @@
                         <MudSelectItem Value="@("Bus")">Bus</MudSelectItem>
                         <MudSelectItem Value="@("Hotel")">Hotel</MudSelectItem>
                         <MudSelectItem Value="@("Package")">Package</MudSelectItem>
-                    </MudSelect>
-                </div>
-                <div style="flex: 1 1 130px; min-width: 120px;">
-                    <MudSelect T="int?" Label="Status" @bind-Value="_selectedStatus" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        <MudSelectItem Value="@((int?)null)">All Statuses</MudSelectItem>
-                        <MudSelectItem Value="@((int?)BookingStatusCodes.Pending)">Pending</MudSelectItem>
-                        <MudSelectItem Value="@((int?)BookingStatusCodes.Confirmed)">Confirmed</MudSelectItem>
-                        <MudSelectItem Value="@((int?)BookingStatusCodes.Rejected)">Rejected</MudSelectItem>
                     </MudSelect>
                 </div>
                 <div style="flex: 1.2 1 150px; min-width: 140px;">
@@ -54,16 +46,17 @@
         <MudTable T="BookingResponseModel" ServerData="LoadServerData" Hover="true" Dense="false"
                   Striped="false" @ref="_table" Elevation="0" Class="et-data-table">
             <HeaderContent>
-                <MudTh Style="width: 44px;"></MudTh>
+                <MudTh Style="width: 48px;"></MudTh>
                 <MudTh Style="width: 56px;">No.</MudTh>
+                <MudTh>Transaction ID</MudTh>
                 <MudTh>Customer</MudTh>
                 <MudTh>Type</MudTh>
+                <MudTh>Service</MudTh>
+                <MudTh>Txn Date</MudTh>
                 <MudTh>Travel Date</MudTh>
-                <MudTh>Seats / Qty</MudTh>
                 <MudTh>Amount</MudTh>
                 <MudTh>Payment</MudTh>
-                <MudTh>Status</MudTh>
-                <MudTh Style="text-align: right;">Actions</MudTh>
+                <MudTh>Booking</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -72,6 +65,9 @@
                                    OnClick="@(() => ToggleExpand(context))" />
                 </MudTd>
                 <MudTd DataLabel="No."><span class="et-row-no">@GetRowNumber(context)</span></MudTd>
+                <MudTd DataLabel="Transaction ID">
+                    <span class="et-badge et-badge--indigo">@GetTransactionId(context)</span>
+                </MudTd>
                 <MudTd DataLabel="Customer">
                     <div class="d-flex flex-column">
                         <MudText Style="font-weight: 700; color: #0F172A;">@(context.UserName ?? "—")</MudText>
@@ -84,89 +80,38 @@
                 <MudTd DataLabel="Type">
                     <span class="et-badge et-badge--indigo">@context.BookingType</span>
                 </MudTd>
-                <MudTd DataLabel="Travel Date" Style="color: #64748B;">@context.TravelDate.ToString("dd-MM-yyyy")</MudTd>
-                <MudTd DataLabel="Seats / Qty">
-                    @if (context.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
-                    {
-                        @(context.Details?.SelectedSeats ?? "—")
-                    }
-                    else
-                    {
-                        @(context.Details?.Quantity.ToString() ?? "—")
-                    }
+                <MudTd DataLabel="Service">
+                    <MudText Typo="Typo.body2" Style="font-weight: 500; color: #334155;">@GetServiceDescription(context)</MudText>
                 </MudTd>
+                <MudTd DataLabel="Txn Date" Style="color: #64748B; font-size: 0.85rem;">@GetTransactionDate(context)</MudTd>
+                <MudTd DataLabel="Travel Date" Style="color: #64748B;">@context.TravelDate.ToString("dd-MM-yyyy")</MudTd>
                 <MudTd DataLabel="Amount" Style="font-weight: 700;">@context.TotalAmount.ToString("N0") mmk</MudTd>
                 <MudTd DataLabel="Payment">
-                    @if (context.PaymentStatus == PaymentStatus.Paid)
-                    {
-                        <span class="et-badge et-badge--success">Paid</span>
-                    }
-                    else if (context.PaymentStatus == PaymentStatus.UnderReview)
-                    {
-                        <span class="et-badge et-badge--warning">Under Review</span>
-                    }
-                    else
-                    {
-                        <span class="et-badge et-badge--muted">Unpaid</span>
-                    }
+                    <span class="et-badge et-badge--muted">Unpaid</span>
                 </MudTd>
-                <MudTd DataLabel="Status">
-                    @if (context.BookingStatusCode == BookingStatusCodes.Pending)
-                    {
-                        <span class="et-badge et-badge--warning">Pending</span>
-                    }
-                    else if (context.BookingStatusCode == BookingStatusCodes.Confirmed)
-                    {
-                        <span class="et-badge et-badge--success">Confirmed</span>
-                    }
-                    else if (context.BookingStatusCode == BookingStatusCodes.Rejected)
-                    {
-                        <span class="et-badge et-badge--danger">Rejected</span>
-                    }
-                    else
-                    {
-                        <span class="et-badge et-badge--muted">Unknown</span>
-                    }
-                </MudTd>
-                <MudTd DataLabel="Actions" Style="text-align: right;">
-                    @if (context.BookingStatusCode == BookingStatusCodes.Pending)
-                    {
-                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="me-1 et-btn-primary"
-                                   Disabled="@(_processingId == context.Id)"
-                                   OnClick="() => ConfirmBooking(context.Id)" style="padding: 5px !important;background:#10B981 !important">
-                            Confirm
-                        </MudButton>
-                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Style="border-radius: 10px; text-transform: none; font-weight: 600;"
-                                   Disabled="@(_processingId == context.Id)"
-                                   OnClick="() => RejectBooking(context.Id)">
-                            Reject
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <span style="color: #cbd5e1; font-size: 0.85rem;">—</span>
-                    }
+                <MudTd DataLabel="Booking">
+                    @RenderBookingBadge(context.BookingStatusCode)
                 </MudTd>
             </RowTemplate>
             <ChildRowContent>
                 @if (_expandedId == context.Id)
                 {
                     <MudTd colspan="11" Class="pa-0" Style="border-bottom: 1px solid #E2E8F0;">
-                        <BookingExpandDetails Booking="context" Title="Booking Details" />
+                        <BookingExpandDetails Booking="context" Title="Transaction Details" ShowBookedOn="true" />
                     </MudTd>
                 }
             </ChildRowContent>
             <NoRecordsContent>
                 <div class="et-empty-state py-8">
-                    <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" Style="opacity: 0.3;" />
-                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No bookings found</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">There are no customer bookings in the database.</MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Large" Style="opacity: 0.3;" />
+                    <MudText Typo="Typo.h6" Class="mt-3" Style="font-weight: 700;">No unpaid transactions</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">All customer payments are up to date.</MudText>
                 </div>
             </NoRecordsContent>
             <LoadingContent>
                 <div class="pa-6 d-flex align-center gap-3">
                     <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
-                    <MudText>Loading bookings...</MudText>
+                    <MudText>Loading transactions...</MudText>
                 </div>
             </LoadingContent>
             <PagerContent>

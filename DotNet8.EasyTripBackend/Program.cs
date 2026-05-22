@@ -4,6 +4,7 @@ using DotNet8.EasyTripBackend.Features.HotelRooms;
 using DotNet8.EasyTripBackend.Features.RoomTypes;
 using DotNet8.EasyTripBackend.Features.TravelPackages;
 using DotNet8.EasyTripBackend.Features.Bookings;
+using DotNet8.EasyTripBackend.Features.Reports;
 
 namespace DotNet8.EasyTripBackend
 {
@@ -37,6 +38,7 @@ namespace DotNet8.EasyTripBackend
             builder.Services.AddScoped<ITravelPackageService, TravelPackageService>();
             builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.BusTypes.IBusTypeService, DotNet8.EasyTripBackend.Features.BusTypes.BusTypeService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

@@ -1,8 +1,6 @@
 @page "/bus-type/create"
+@inherits ComponentBase
 @rendermode InteractiveWebAssembly
-@inject HttpClient Http
-@inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
 <MudContainer Class="et-form-page">
     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
@@ -44,44 +42,3 @@
     </MudPaper>
 </MudContainer>
 
-@code {
-    private BusTypeRequestModel _busTypeModel = new();
-    private bool _success = false;
-    private bool _isSaving = false;
-    private MudForm? _form;
-
-    private void Cancel() => Nav.NavigateTo("/bus-type");
-
-    private async Task Submit()
-    {
-        if (_form != null)
-        {
-            await _form.ValidateAsync();
-            if (!_form.IsValid) return;
-        }
-
-        _isSaving = true;
-        try
-        {
-            var response = await Http.PostAsJsonAsync("api/BusType/create", _busTypeModel);
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Bus Type created successfully!", Severity.Success);
-                Nav.NavigateTo("/bus-type");
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Failed to create bus type: {error}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isSaving = false;
-        }
-    }
-}

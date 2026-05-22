@@ -67,8 +67,11 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             string? name = null,
             string? type = null,
             int? status = null,
+            int? paymentStatus = null,
             DateOnly? startDate = null,
-            DateOnly? endDate = null)
+            DateOnly? endDate = null,
+            bool filterByCreatedDate = false,
+            bool newestFirst = false)
         {
             var query = _context.Bookings
                 .Include(b => b.User)
@@ -77,7 +80,16 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
 
             if (!string.IsNullOrWhiteSpace(name))
             {
-                query = query.Where(b => b.User != null && (b.User.Name.Contains(name) || b.User.Email.Contains(name)));
+                var search = name.Trim();
+                if (search.StartsWith("TXN-", StringComparison.OrdinalIgnoreCase) &&
+                    long.TryParse(search.AsSpan(4), out var txnId))
+                {
+                    query = query.Where(b => b.Id == txnId);
+                }
+                else
+                {
+                    query = query.Where(b => b.User != null && (b.User.Name.Contains(search) || b.User.Email.Contains(search)));
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(type))
@@ -90,7 +102,31 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 query = query.Where(b => b.BookingStatus == status.Value);
             }
 
-            if (startDate.HasValue && endDate.HasValue)
+            if (paymentStatus.HasValue)
+            {
+                query = query.Where(b => b.PaymentStatus == paymentStatus.Value);
+            }
+
+            if (filterByCreatedDate)
+            {
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    var start = startDate.Value.ToDateTime(TimeOnly.MinValue);
+                    var end = endDate.Value.ToDateTime(TimeOnly.MaxValue);
+                    query = query.Where(b => b.CreatedAt >= start && b.CreatedAt <= end);
+                }
+                else if (startDate.HasValue)
+                {
+                    var start = startDate.Value.ToDateTime(TimeOnly.MinValue);
+                    query = query.Where(b => b.CreatedAt >= start);
+                }
+                else if (endDate.HasValue)
+                {
+                    var end = endDate.Value.ToDateTime(TimeOnly.MaxValue);
+                    query = query.Where(b => b.CreatedAt <= end);
+                }
+            }
+            else if (startDate.HasValue && endDate.HasValue)
             {
                 query = query.Where(b => b.TravelDate >= startDate.Value && b.TravelDate <= endDate.Value);
             }
@@ -105,8 +141,11 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
 
             var totalCount = await query.CountAsync();
 
-            var bookings = await query
-                .OrderBy(b => b.Id)
+            var orderedQuery = newestFirst
+                ? query.OrderByDescending(b => b.CreatedAt).ThenByDescending(b => b.Id)
+                : query.OrderBy(b => b.Id);
+
+            var bookings = await orderedQuery
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

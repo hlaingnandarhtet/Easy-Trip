@@ -1,0 +1,161 @@
+@using DotNet8.EasyTripBackendApi.Models
+
+<div class="et-expand-panel">
+    <div class="et-expand-panel__head">
+        <MudText Typo="Typo.subtitle1" Class="et-expand-panel__title">@Title</MudText>
+        <span class="et-badge et-badge--indigo">TXN-@Booking.Id.ToString("D5")</span>
+        <span class="et-badge et-badge--indigo">@Booking.BookingType</span>
+    </div>
+
+    <div class="et-expand-panel__grid">
+        <!-- Customer -->
+        <div class="et-expand-card et-expand-card--customer">
+            <div class="et-expand-card__top">
+                <div class="et-expand-card__icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                </div>
+                <span class="et-expand-card__label">Customer</span>
+            </div>
+            <div class="et-expand-card__body">
+                <div class="et-expand-field">
+                    <span class="et-expand-field__key">Name</span>
+                    <span class="et-expand-field__val">@(Booking.UserName ?? "—")</span>
+                </div>
+                <div class="et-expand-field">
+                    <span class="et-expand-field__key">Email</span>
+                    <span class="et-expand-field__val et-expand-field__val--muted">@(Booking.UserEmail ?? "—")</span>
+                </div>
+                @if (ShowBookedOn)
+                {
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Booked on</span>
+                        <span class="et-expand-field__val">@GetBookedOn()</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Service -->
+        <div class="et-expand-card et-expand-card--service">
+            <div class="et-expand-card__top">
+                <div class="et-expand-card__icon">
+                    <MudIcon Icon="@GetServiceIcon()" Size="Size.Small" />
+                </div>
+                <span class="et-expand-card__label">Service</span>
+            </div>
+            <div class="et-expand-card__body">
+                <div class="et-expand-field">
+                    <span class="et-expand-field__key">Item</span>
+                    <span class="et-expand-field__val">@GetServiceDescription()</span>
+                </div>
+                <div class="et-expand-field">
+                    <span class="et-expand-field__key">Travel date</span>
+                    <span class="et-expand-field__val">@Booking.TravelDate.ToString("dd-MM-yyyy")</span>
+                </div>
+                @if (Booking.Details?.EndDate != null)
+                {
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Check-out</span>
+                        <span class="et-expand-field__val">@Booking.Details.EndDate?.ToString("dd-MM-yyyy")</span>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Booking.Details?.SelectedSeats))
+                {
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Seats</span>
+                        <span class="et-expand-field__val">@Booking.Details!.SelectedSeats</span>
+                    </div>
+                }
+                else if (Booking.Details?.Quantity > 0)
+                {
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Quantity</span>
+                        <span class="et-expand-field__val">@Booking.Details!.Quantity</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Payment & status -->
+        <div class="et-expand-card et-expand-card--payment">
+            <div class="et-expand-card__top">
+                <div class="et-expand-card__icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" />
+                </div>
+                <span class="et-expand-card__label">Payment</span>
+            </div>
+            <div class="et-expand-card__body">
+                <div class="et-expand-field">
+                    <span class="et-expand-field__key">Amount</span>
+                    <span class="et-expand-field__val et-expand-field__val--amount">@Booking.TotalAmount.ToString("N0") mmk</span>
+                </div>
+            </div>
+            <div class="et-expand-card__footer">
+                @RenderPaymentBadge(Booking.PaymentStatus)
+                @RenderBookingBadge(Booking.BookingStatusCode)
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public BookingResponseModel Booking { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "Details";
+    [Parameter] public bool ShowBookedOn { get; set; }
+
+    private string GetBookedOn()
+    {
+        var date = Booking.CreatedAt ?? Booking.BookingDate;
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") : "—";
+    }
+
+    private string GetServiceDescription()
+    {
+        if (Booking.Details == null) return Booking.ItemName ?? "—";
+        return Booking.BookingType switch
+        {
+            "Bus" => $"{Booking.Details.BusName ?? Booking.Details.BusNumber ?? "—"}" +
+                     (string.IsNullOrEmpty(Booking.Details.SelectedSeats) ? "" : $" (Seats: {Booking.Details.SelectedSeats})"),
+            "Hotel" => $"{Booking.Details.HotelName ?? "—"} — {Booking.Details.HotelRoomTypeName ?? "Room"} × {Booking.Details.Quantity}",
+            _ => $"{Booking.Details.PackageName ?? Booking.ItemName ?? "—"}"
+        };
+    }
+
+    private string GetServiceIcon()
+    {
+        if (Booking.BookingType.Equals("Bus", StringComparison.OrdinalIgnoreCase))
+            return Icons.Material.Filled.DirectionsBus;
+        if (Booking.BookingType.Equals("Hotel", StringComparison.OrdinalIgnoreCase))
+            return Icons.Material.Filled.Hotel;
+        return Icons.Material.Filled.CardTravel;
+    }
+
+    private static RenderFragment RenderPaymentBadge(PaymentStatus status) => builder =>
+    {
+        var (text, css) = status switch
+        {
+            PaymentStatus.Paid => ("Paid", "et-badge et-badge--success"),
+            PaymentStatus.UnderReview => ("Under Review", "et-badge et-badge--warning"),
+            _ => ("Unpaid", "et-badge et-badge--muted")
+        };
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", css);
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+
+    private static RenderFragment RenderBookingBadge(int code) => builder =>
+    {
+        var (text, css) = code switch
+        {
+            BookingStatusCodes.Pending => ("Pending", "et-badge et-badge--warning"),
+            BookingStatusCodes.Confirmed => ("Confirmed", "et-badge et-badge--success"),
+            BookingStatusCodes.Rejected => ("Rejected", "et-badge et-badge--danger"),
+            _ => ("Unknown", "et-badge et-badge--muted")
+        };
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", css);
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+}

@@ -1,0 +1,117 @@
+@page "/reports/top-services"
+@inherits ComponentBase
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Top Performing Services Report"
+                Subtitle="Highest revenue and booking volume services ranked by performance."
+                Icon="@Icons.Material.Filled.EmojiEvents">
+        <Actions>
+            <MudDatePicker Label="From" @bind-Date="_startDate" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true" DateFormat="dd-MM-yyyy" Style="min-width:130px;" />
+            <MudDatePicker Label="To" @bind-Date="_endDate" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true" DateFormat="dd-MM-yyyy" Style="min-width:130px;" />
+            <MudSelect T="string" @bind-Value="_serviceType" Label="Type" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Dense="true" Style="min-width:110px;">
+                <MudSelectItem Value="@("All")">All</MudSelectItem>
+                <MudSelectItem Value="@("Bus")">Bus</MudSelectItem>
+                <MudSelectItem Value="@("Hotel")">Hotel</MudSelectItem>
+                <MudSelectItem Value="@("Package")">Package</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_metric" Label="Rank by" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Dense="true" Style="min-width:120px;">
+                <MudSelectItem Value="@("revenue")">Revenue</MudSelectItem>
+                <MudSelectItem Value="@("bookings")">Bookings</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="int" @bind-Value="_topCount" Label="Top" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Dense="true" Style="min-width:80px;">
+                <MudSelectItem Value="5">5</MudSelectItem>
+                <MudSelectItem Value="10">10</MudSelectItem>
+                <MudSelectItem Value="20">20</MudSelectItem>
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       OnClick="LoadReportAsync" StartIcon="@Icons.Material.Filled.Refresh"
+                       Style="height:40px; text-transform:none; font-weight:600; border-radius:10px;">
+                Apply
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    @if (_isLoading)
+    {
+        <div class="rpt-loading">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Style="font-weight:600; color:#64748B;">Loading top services…</MudText>
+        </div>
+    }
+    else if (_report == null)
+    {
+        <MudAlert Severity="Severity.Warning">Could not load report. Ensure the API is running.</MudAlert>
+    }
+    else
+    {
+        <MudGrid Class="mb-4" Spacing="3">
+            <MudItem xs="12" sm="4">
+                <div class="rpt-stat rpt-stat--green">
+                    <div class="rpt-stat-label">Services Ranked</div>
+                    <div class="rpt-stat-value">@_report.Services.Count</div>
+                    <div class="rpt-stat-sub">Top @_topCount by @_metric</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div class="rpt-stat rpt-stat--blue">
+                    <div class="rpt-stat-label">Combined Revenue</div>
+                    <div class="rpt-stat-value">@($"{CombinedRevenue:N0}") mmk</div>
+                    <div class="rpt-stat-sub">From listed services</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div class="rpt-stat rpt-stat--amber">
+                    <div class="rpt-stat-label">Total Bookings</div>
+                    <div class="rpt-stat-value">@TotalBookingsCount</div>
+                    <div class="rpt-stat-sub">@_report.StartDate.ToString("dd MMM") – @_report.EndDate.ToString("dd MMM yyyy")</div>
+                </div>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Class="et-table-card" Elevation="0">
+            <div class="et-table-toolbar">
+                <MudText Typo="Typo.h6" Style="font-weight:700; color:#0F172A;">
+                    Top @(_report.Services.Count) — @(_report.Metric == "revenue" ? "by Revenue" : "by Bookings")
+                </MudText>
+            </div>
+            <MudTable T="TopServiceItem" Items="@_report.Services" Hover="true" Dense="false"
+                      Elevation="0" Class="et-data-table">
+                <HeaderContent>
+                    <MudTh Style="width:56px;">Rank</MudTh>
+                    <MudTh>Service</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Bookings</MudTh>
+                    <MudTh>Revenue (mmk)</MudTh>
+                    <MudTh>Avg Order</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="@RankClass(context.Rank)">@context.Rank</span></MudTd>
+                    <MudTd>
+                        <div style="font-weight:700; color:#0F172A;">@context.ServiceName</div>
+                        @if (!string.IsNullOrEmpty(context.Description))
+                        {
+                            <div style="font-size:0.75rem; color:#64748B;">@context.Description</div>
+                        }
+                    </MudTd>
+                    <MudTd><span class="et-badge et-badge--indigo">@context.ServiceType</span></MudTd>
+                    <MudTd>@context.BookingCount</MudTd>
+                    <MudTd Style="font-weight:700;">@context.TotalRevenue.ToString("N0")</MudTd>
+                    <MudTd>@context.AverageOrderValue.ToString("N0") mmk</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <div class="pa-8 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Large" Style="opacity:0.4;" />
+                        <MudText Typo="Typo.h6" Style="font-weight:700; color:#64748B;">No paid bookings in this period</MudText>
+                        <MudText Typo="Typo.caption">Try widening the date range or changing filters.</MudText>
+                    </div>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+</MudContainer>

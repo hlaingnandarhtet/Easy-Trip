@@ -1,0 +1,128 @@
+@page "/reports/sales-revenue"
+@inherits ComponentBase
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="et-page">
+    <PageHeader Title="Sales & Revenue Report"
+                Subtitle="Paid transaction revenue, growth trends, and breakdown by service type."
+                Icon="@Icons.Material.Filled.TrendingUp">
+        <Actions>
+            <MudDatePicker Label="From" @bind-Date="_startDate" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true" DateFormat="dd-MM-yyyy" Style="min-width:140px;" />
+            <MudDatePicker Label="To" @bind-Date="_endDate" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true" DateFormat="dd-MM-yyyy" Style="min-width:140px;" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="et-btn-primary"
+                       OnClick="LoadReportAsync" StartIcon="@Icons.Material.Filled.Refresh"
+                       Style="height:40px; text-transform:none; font-weight:600; border-radius:10px;">
+                Apply
+            </MudButton>
+        </Actions>
+    </PageHeader>
+
+    @if (_isLoading)
+    {
+        <div class="rpt-loading">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Style="font-weight:600; color:#64748B;">Loading sales report…</MudText>
+        </div>
+    }
+    else if (_report == null)
+    {
+        <MudAlert Severity="Severity.Warning">Could not load report. Ensure the API is running.</MudAlert>
+    }
+    else
+    {
+        <MudGrid Class="mb-4" Spacing="3">
+            <MudItem xs="12" sm="6" md="3">
+                <div class="rpt-stat rpt-stat--green">
+                    <div class="rpt-stat-label">Total Revenue</div>
+                    <div class="rpt-stat-value">@($"{_report.TotalRevenue:N0}") mmk</div>
+                    <div class="rpt-stat-sub">Paid bookings in period</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="rpt-stat rpt-stat--blue">
+                    <div class="rpt-stat-label">Period Growth</div>
+                    <div class="rpt-stat-value @(_report.RevenueGrowthPercentage >= 0 ? "rpt-growth-up" : "rpt-growth-down")">
+                        @FormatGrowth(_report.RevenueGrowthPercentage)
+                    </div>
+                    <div class="rpt-stat-sub">vs previous @((_report.EndDate - _report.StartDate).Days + 1) days</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="rpt-stat rpt-stat--amber">
+                    <div class="rpt-stat-label">Paid Transactions</div>
+                    <div class="rpt-stat-value">@_report.PaidTransactionCount</div>
+                    <div class="rpt-stat-sub">@_report.StartDate.ToString("dd MMM") – @_report.EndDate.ToString("dd MMM yyyy")</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="rpt-stat rpt-stat--rose">
+                    <div class="rpt-stat-label">Previous Period</div>
+                    <div class="rpt-stat-value">@($"{_report.PreviousPeriodRevenue:N0}") mmk</div>
+                    <div class="rpt-stat-sub">Comparable prior window</div>
+                </div>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Class="mb-4" Spacing="3">
+            <MudItem xs="12" md="8">
+                <MudPaper Class="rpt-chart-card pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color:#0F172A;">Revenue Over Time</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#64748B;" Class="mb-3">Daily paid revenue by service type</MudText>
+                    @if (_chartLabels.Length > 0)
+                    {
+                        <MudChart T="double" ChartType="ChartType.Line" ChartSeries="@_lineSeries"
+                                  ChartOptions="@_lineOptions" ChartLabels="@_chartLabels"
+                                  Width="100%" Height="300px" />
+                    }
+                    else
+                    {
+                        <MudText Style="color:#94A3B8; padding:40px 0; text-align:center;">No revenue data in this period.</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="rpt-chart-card pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color:#0F172A;">Revenue Mix</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#64748B;" Class="mb-3">Share by booking type</MudText>
+                    @if (_donutSeries.Any())
+                    {
+                        <MudChart T="double" ChartType="ChartType.Donut" ChartSeries="@_donutSeries"
+                                  ChartOptions="@_donutOptions"
+                                  ChartLabels="@_report.RevenueByType.Select(r => r.Type).ToArray()"
+                                  Width="100%" Height="280px" />
+                    }
+                    else
+                    {
+                        <MudText Style="color:#94A3B8; padding:40px 0; text-align:center;">No paid revenue yet.</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Class="et-table-card" Elevation="0">
+            <div class="et-table-toolbar">
+                <MudText Typo="Typo.h6" Style="font-weight:700; color:#0F172A;">Revenue by Service Type</MudText>
+            </div>
+            <MudTable T="RevenueByTypeItem" Items="@_report.RevenueByType" Hover="true" Dense="true"
+                      Elevation="0" Class="et-data-table">
+                <HeaderContent>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Transactions</MudTh>
+                    <MudTh>Revenue (mmk)</MudTh>
+                    <MudTh>Share</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><span class="et-badge et-badge--indigo">@context.Type</span></MudTd>
+                    <MudTd>@context.TransactionCount</MudTd>
+                    <MudTd Style="font-weight:700;">@context.Amount.ToString("N0")</MudTd>
+                    <MudTd>@context.Percentage.ToString("F1")%</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Class="pa-4" Style="color:#94A3B8;">No revenue in selected period.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+</MudContainer>
