@@ -268,6 +268,25 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 _context.Bookings.Add(newBooking);
                 await _context.SaveChangesAsync();
 
+                if (!string.IsNullOrEmpty(request.PaymentType) &&
+                    !string.IsNullOrEmpty(request.TransactionNo) &&
+                    !string.IsNullOrEmpty(request.ScreenshotImage))
+                {
+                    newBooking.PaymentStatus = (int)PaymentStatus.UnderReview;
+                    _context.Bookings.Update(newBooking);
+
+                    var bookingPayment = new BookingPayment
+                    {
+                        BookingId = newBooking.Id,
+                        PaymentType = request.PaymentType,
+                        TransactionNo = request.TransactionNo,
+                        ScreenshotImage = request.ScreenshotImage,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.BookingPayments.Add(bookingPayment);
+                    await _context.SaveChangesAsync();
+                }
+
                 // Insert into booking_details table
                 var newBookingDetail = new BookingDetail
                 {
@@ -524,6 +543,25 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 _context.Bookings.Add(newBooking);
                 await _context.SaveChangesAsync();
 
+                if (!string.IsNullOrEmpty(request.PaymentType) &&
+                    !string.IsNullOrEmpty(request.TransactionNo) &&
+                    !string.IsNullOrEmpty(request.ScreenshotImage))
+                {
+                    newBooking.PaymentStatus = (int)PaymentStatus.UnderReview;
+                    _context.Bookings.Update(newBooking);
+
+                    var bookingPayment = new BookingPayment
+                    {
+                        BookingId = newBooking.Id,
+                        PaymentType = request.PaymentType,
+                        TransactionNo = request.TransactionNo,
+                        ScreenshotImage = request.ScreenshotImage,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.BookingPayments.Add(bookingPayment);
+                    await _context.SaveChangesAsync();
+                }
+
                 var newBookingDetail = new DotNet8.EasyTripBackendApi.DbService.Models.BookingDetail
                 {
                     BookingId = newBooking.Id,
@@ -572,6 +610,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 if (existingBooking == null) return null;
 
                 existingBooking.BookingStatus = BookingStatusCodes.Confirmed;
+                existingBooking.PaymentStatus = (int)PaymentStatus.Paid;
                 existingBooking.UpdatedAt = DateTime.UtcNow;
                 _context.Bookings.Update(existingBooking);
 
@@ -624,6 +663,11 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             var packages = packageIds.Any()
                 ? await _context.TravelPackages.Where(tp => packageIds.Contains(tp.Id)).ToDictionaryAsync(tp => tp.Id, tp => tp)
                 : new Dictionary<long, TravelPackage>();
+
+            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var bookingPayments = bookingIds.Any()
+                ? await _context.BookingPayments.Where(p => bookingIds.Contains(p.BookingId)).ToDictionaryAsync(p => p.BookingId, p => p)
+                : new Dictionary<long, BookingPayment>();
 
             return bookings.Select(b => {
                 var detail = b.BookingDetails.FirstOrDefault();
@@ -703,6 +747,20 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                     };
                 }
 
+                BookingPaymentResponseModel? paymentDetailsModel = null;
+                if (bookingPayments.TryGetValue(b.Id, out var payment))
+                {
+                    paymentDetailsModel = new BookingPaymentResponseModel
+                    {
+                        Id = payment.Id,
+                        BookingId = payment.BookingId,
+                        PaymentType = payment.PaymentType,
+                        TransactionNo = payment.TransactionNo,
+                        ScreenshotImage = payment.ScreenshotImage,
+                        CreatedAt = payment.CreatedAt
+                    };
+                }
+
                 return new BookingResponseModel
                 {
                     Id = b.Id,
@@ -721,7 +779,8 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                     CreatedAt = b.CreatedAt,
                     UpdatedAt = b.UpdatedAt,
                     DeletedAt = b.DeletedAt,
-                    Details = detailModel
+                    Details = detailModel,
+                    PaymentDetails = paymentDetailsModel
                 };
             }).ToList();
         }

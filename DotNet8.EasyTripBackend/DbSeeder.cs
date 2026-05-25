@@ -64,6 +64,42 @@ namespace DotNet8.EasyTripBackend
                                 ALTER TABLE buses ADD CONSTRAINT buses_bus_type_id_fkey FOREIGN KEY (bus_type_id) REFERENCES bus_types(id) ON DELETE SET NULL;
                             END IF;
                         END $$;
+
+                        -- Create payment_methods table if not exists
+                        CREATE TABLE IF NOT EXISTS payment_methods (
+                            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                            payment_type VARCHAR(50) NOT NULL UNIQUE,
+                            account_name VARCHAR(100) NOT NULL,
+                            account_number VARCHAR(100) NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NULL,
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NULL,
+                            deleted_at TIMESTAMP WITH TIME ZONE NULL
+                        );
+
+                        -- Add created_at, updated_at, deleted_at to payment_methods if missing
+                        ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NULL;
+                        ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NULL;
+                        ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE NULL;
+
+                        -- Seed default payment methods if empty
+                        INSERT INTO payment_methods (payment_type, account_name, account_number)
+                        VALUES 
+                            ('kpay', 'U Aung Ko Ko', '09400123456'),
+                            ('wave', 'U Aung Ko Ko', '09950123456'),
+                            ('aya', 'U Aung Ko Ko', '09200123456'),
+                            ('uab', 'U Aung Ko Ko', '09700123456')
+                        ON CONFLICT (payment_type) DO NOTHING;
+
+                        -- Create booking_payments table if not exists
+                        CREATE TABLE IF NOT EXISTS booking_payments (
+                            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                            booking_id BIGINT NOT NULL,
+                            payment_type VARCHAR(50) NOT NULL,
+                            transaction_no VARCHAR(100) NOT NULL,
+                            screenshot_image TEXT NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT fk_booking_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+                        );
                     ";
                     await cmd.ExecuteNonQueryAsync();
                 }

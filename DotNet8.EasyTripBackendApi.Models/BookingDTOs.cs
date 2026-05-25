@@ -19,6 +19,11 @@ namespace DotNet8.EasyTripBackendApi.Models
         public decimal TotalAmount { get; set; }
         public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
         public BookingStatus BookingStatus { get; set; } = BookingStatus.Pending;
+
+        // Payment details submitted by user
+        public string? PaymentType { get; set; }
+        public string? TransactionNo { get; set; }
+        public string? ScreenshotImage { get; set; }
     }
 
     public class PublicBookingRequestModel : BookingRequestModel
@@ -50,6 +55,8 @@ namespace DotNet8.EasyTripBackendApi.Models
 
         // Combined Detailed response representing the booking_details table records
         public BookingDetailResponseModel? Details { get; set; }
+
+        public BookingPaymentResponseModel? PaymentDetails { get; set; }
     }
 
     public class BookingDetailResponseModel

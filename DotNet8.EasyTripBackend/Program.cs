@@ -39,6 +39,7 @@ namespace DotNet8.EasyTripBackend
             builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.BusTypes.IBusTypeService, DotNet8.EasyTripBackend.Features.BusTypes.BusTypeService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.Payments.IPaymentService, DotNet8.EasyTripBackend.Features.Payments.PaymentService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

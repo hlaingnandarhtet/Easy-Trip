@@ -1,0 +1,58 @@
+@page "/payment-methods/edit/{Id:long}"
+@rendermode InteractiveWebAssembly
+
+<MudContainer Class="et-form-page">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Cancel" Class="mb-3 et-btn-ghost">
+        Back to payment methods
+    </MudButton>
+
+    <MudPaper Class="et-form-card" Elevation="0">
+        <div class="et-form-card__hero">
+            <MudText Typo="Typo.h5" Style="font-weight: 800;">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                Edit Payment Method
+            </MudText>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center align-center py-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_success">
+                <div class="et-form-section pb-4">
+                    <div class="et-form-section__title">Payment method details</div>
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="4">
+                            <MudTextField T="string" Label="Payment Provider" Required="true" RequiredError="Payment provider name is required"
+                                           @bind-Value="_paymentMethodModel.PaymentType" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField T="string" Label="Account Name" Required="true" RequiredError="Account name is required"
+                                           @bind-Value="_paymentMethodModel.AccountName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField T="string" Label="Account Number / Phone" Required="true" RequiredError="Account number is required"
+                                           @bind-Value="_paymentMethodModel.AccountNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudForm>
+        }
+
+        <div class="et-form-actions">
+            <MudButton Variant="Variant.Outlined" OnClick="Cancel" Class="et-btn-ghost" Disabled="_isSaving">Cancel</MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@(!_success || _isSaving || _isLoading)" Class="et-btn-primary">
+                @if (_isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Save Changes
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>

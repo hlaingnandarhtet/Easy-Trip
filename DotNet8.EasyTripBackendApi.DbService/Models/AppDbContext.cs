@@ -35,6 +35,10 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
+
+    public virtual DbSet<BookingPayment> BookingPayments { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseNpgsql("Host=db.zjjmggyrlhgbdyormcup.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=2612000@#$!!$;Ssl Mode=Require;Trust Server Certificate=true;");
@@ -392,6 +396,61 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<PaymentMethod>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("payment_methods_pkey");
+
+            entity.ToTable("payment_methods");
+
+            entity.HasIndex(e => e.PaymentType, "payment_methods_payment_type_key").IsUnique();
+
+            entity.Property(e => e.Id)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("id");
+            entity.Property(e => e.PaymentType)
+                .HasMaxLength(50)
+                .HasColumnName("payment_type");
+            entity.Property(e => e.AccountName)
+                .HasMaxLength(100)
+                .HasColumnName("account_name");
+            entity.Property(e => e.AccountNumber)
+                .HasMaxLength(100)
+                .HasColumnName("account_number");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("updated_at");
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+        });
+
+        modelBuilder.Entity<BookingPayment>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("booking_payments_pkey");
+
+            entity.ToTable("booking_payments");
+
+            entity.Property(e => e.Id)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("id");
+            entity.Property(e => e.BookingId).HasColumnName("booking_id");
+            entity.Property(e => e.PaymentType)
+                .HasMaxLength(50)
+                .HasColumnName("payment_type");
+            entity.Property(e => e.TransactionNo)
+                .HasMaxLength(100)
+                .HasColumnName("transaction_no");
+            entity.Property(e => e.ScreenshotImage).HasColumnName("screenshot_image");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("created_at");
+
+            entity.HasOne(d => d.Booking).WithMany()
+                .HasForeignKey(d => d.BookingId)
+                .HasConstraintName("fk_booking_payments_booking");
         });
 
         OnModelCreatingPartial(modelBuilder);

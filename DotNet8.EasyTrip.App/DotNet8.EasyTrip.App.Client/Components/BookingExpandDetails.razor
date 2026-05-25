@@ -89,6 +89,23 @@
                     <span class="et-expand-field__key">Amount</span>
                     <span class="et-expand-field__val et-expand-field__val--amount">@Booking.TotalAmount.ToString("N0") mmk</span>
                 </div>
+                @if (Booking.PaymentDetails != null)
+                {
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Method</span>
+                        <span class="et-expand-field__val" style="text-transform: uppercase; font-weight: 700; color: #1e3a8a;">@Booking.PaymentDetails.PaymentType</span>
+                    </div>
+                    <div class="et-expand-field">
+                        <span class="et-expand-field__key">Ref / Slip No</span>
+                        <span class="et-expand-field__val" style="font-family: monospace; font-weight: 600; color: #0f172a;">@Booking.PaymentDetails.TransactionNo</span>
+                    </div>
+                    <div class="mt-2 text-center">
+                        <span class="d-block mb-1" style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Transfer Slip Screenshot</span>
+                        <a href="@Booking.PaymentDetails.ScreenshotImage" target="_blank">
+                            <img src="@Booking.PaymentDetails.ScreenshotImage" style="max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; transition: transform 0.2s;" class="verification-slip-thumbnail" />
+                        </a>
+                    </div>
+                }
             </div>
             <div class="et-expand-card__footer">
                 @RenderPaymentBadge(Booking.PaymentStatus)

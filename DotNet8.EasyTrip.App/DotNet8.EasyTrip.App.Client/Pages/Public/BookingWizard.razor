@@ -6,6 +6,7 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-6 mb-12">
     @if (isLoading)
@@ -373,6 +374,97 @@
                                         <MudNumericField @bind-Value="Quantity" Label="Rooms Quantity" Min="1" Max="@hotelData.AvailableRooms" Variant="Variant.Outlined" Margin="Margin.Dense" />
                                     </MudItem>
                                 </MudGrid>
+
+                                <!-- Section 3: Payment Details -->
+                                <div class="mt-6">
+                                    <div class="d-flex align-center mb-4">
+                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Class="mr-2" />
+                                        <MudText Typo="Typo.h6" Style="font-weight: 700;">Payment details</MudText>
+                                    </div>
+
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                                        Select your payment method, transfer exactly <strong>@TotalAmount.ToString("N0") mmk</strong> to the admin's account and upload the screenshot of the transfer slip.
+                                    </MudText>
+
+                                    <!-- Payment Type Selector Cards -->
+                                    <div class="d-flex gap-3 mb-4 flex-wrap">
+                                        @foreach (var pm in paymentMethods)
+                                        {
+                                            var isSelected = paymentType == pm.PaymentType;
+                                            <div class="payment-method-card @(isSelected ? "selected" : "")" @onclick="() => SelectPaymentMethod(pm)">
+                                                <div class="payment-method-header">
+                                                    <MudIcon Icon="@(pm.PaymentType switch {
+                                                        "kpay" => Icons.Material.Filled.AccountBalance,
+                                                        "wave" => Icons.Material.Filled.SendToMobile,
+                                                        "aya" => Icons.Material.Filled.AccountBalance,
+                                                        _ => Icons.Material.Filled.CreditCard
+                                                    })" Color="@(isSelected ? Color.Primary : Color.Default)" Class="mr-2" />
+                                                    <span class="payment-method-name">@(pm.PaymentType.ToUpper())</span>
+                                                </div>
+                                                @if (isSelected)
+                                                {
+                                                    <span class="check-mark">✓</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+
+                                    @if (selectedPaymentMethod != null)
+                                    {
+                                        <div class="admin-account-info-box pa-4 rounded mb-4" style="background-color: #f8fafc; border-left: 4px solid #3b82f6;">
+                                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold mb-2">Admin Payment Details</MudText>
+                                            <div class="d-flex justify-space-between mb-1">
+                                                <span style="color: #64748b; font-size: 0.85rem;">Account Name:</span>
+                                                <span style="font-weight: 600; font-size: 0.85rem;">@selectedPaymentMethod.AccountName</span>
+                                            </div>
+                                            <div class="d-flex justify-space-between align-center">
+                                                <span style="color: #64748b; font-size: 0.85rem;">Account Number / Phone:</span>
+                                                <div class="d-flex align-center gap-1">
+                                                    <span style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem;">@selectedPaymentMethod.AccountNumber</span>
+                                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" OnClick="CopyAccountNumber" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <MudGrid Spacing="2">
+                                            <MudItem xs="12" sm="6">
+                                                <MudTextField @bind-Value="transactionNo" Label="Last Transaction Slip No / Ref No" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" Placeholder="Enter reference code or last 6 digits" />
+                                            </MudItem>
+                                            <MudItem xs="12" sm="6">
+                                                <div class="d-flex flex-column">
+                                                    <label style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Transfer Slip Screenshot *</label>
+                                                    <div class="d-flex align-center gap-2">
+                                                        <MudButton HtmlTag="label"
+                                                                   Variant="Variant.Outlined"
+                                                                   Color="Color.Primary"
+                                                                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                                                                   Style="text-transform: none; border-radius: 8px;">
+                                                            Upload Screenshot
+                                                            <InputFile id="hotelFileInput" OnChange="OnInputFileChange" hidden accept="image/*" />
+                                                        </MudButton>
+                                                        @if (isUploadingImage)
+                                                        {
+                                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                                        }
+                                                        else if (!string.IsNullOrEmpty(screenshotFileName))
+                                                        {
+                                                            <div class="d-flex align-center gap-1">
+                                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                                                <span style="font-size: 0.8rem; color: #0f172a; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@screenshotFileName</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </MudItem>
+                                        </MudGrid>
+                                        @if (!string.IsNullOrEmpty(screenshotImage))
+                                        {
+                                            <div class="mt-4 text-center">
+                                                <img src="@screenshotImage" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);" />
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             </MudItem>
 
                             <!-- Right: Order Summary -->
@@ -572,38 +664,46 @@
         }
         else
         {
-            <div class="d-flex justify-space-between align-center mb-6 border-b pb-3">
-                <div>
-                    <MudText Typo="Typo.h5" Class="font-weight-bold">Checkout</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Review details and complete your reservation.</MudText>
+            <div class="booking-checkout-shell">
+                <div class="booking-checkout-hero">
+                    <div>
+                        <div class="checkout-eyebrow">@Type reservation</div>
+                        <MudText Typo="Typo.h4" Class="checkout-hero-title">Complete your booking</MudText>
+                        <MudText Typo="Typo.body2" Class="checkout-hero-subtitle">Choose your options, add guest details, then upload your payment proof.</MudText>
+                    </div>
+                    <div class="checkout-total-pill">
+                        <span>Total</span>
+                        <strong>@TotalAmount.ToString("N0") mmk</strong>
+                    </div>
                 </div>
-                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">@Type Booking</MudChip>
-            </div>
 
-            <MudGrid Spacing="3">
+            <MudGrid Spacing="4">
                 <!-- Left Column: Options & Guest Info -->
                 <MudItem xs="12" md="7" lg="8">
                     <!-- Section 1: Options -->
-                    <MudPaper Class="pa-4 mb-4" Elevation="1" Style="border: 1px solid #e0e0e0;">
-                        <div class="d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Primary" Class="mr-2" Size="Size.Small"/>
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">1. Selection</MudText>
+                    <MudPaper Class="checkout-card mb-4" Elevation="0">
+                        <div class="checkout-section-head">
+                            <div class="checkout-step-icon">1</div>
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Class="checkout-section-title">Selection</MudText>
+                                <MudText Typo="Typo.caption" Class="checkout-section-note">Pick the trip option you want to reserve.</MudText>
+                            </div>
                         </div>
 
                         @if (Type == "Bus" && busData != null)
                         {
-                            <div class="d-flex justify-space-between align-center p-3 mb-4 rounded" style="background-color: #f5f5f5;">
+                            <div class="booking-service-card">
                                 <div>
                                     <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@busData.BusName</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@busData.StartPoint to @busData.EndPoint</MudText>
+                                    <MudText Typo="Typo.caption" Class="service-route">@busData.StartPoint to @busData.EndPoint</MudText>
                                 </div>
-                                <div class="text-right">
-                                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="font-weight-bold">@PricePerSeat.ToString("N0") mmk</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">per seat</MudText>
+                                <div class="service-price">
+                                    <strong>@PricePerSeat.ToString("N0") mmk</strong>
+                                    <span>per seat</span>
                                 </div>
                             </div>
                             
-                            <div class="mx-auto" style="max-width: 400px;">
+                            <div class="seat-map-panel">
                                 <DotNet8.EasyTrip.App.Client.Pages.Public.SeatMap
                                     @key="@($"{ItemId}-{TravelDateValue:yyyyMMdd}-{ReservedSeatsKey}")"
                                     BusLayoutMetadata="@SelectedBusLayout"
@@ -615,22 +715,28 @@
                         }
                         else if (Type == "Package" && packageData != null)
                         {
-                            <div class="d-flex justify-space-between align-center p-3 mb-4 rounded" style="background-color: #f5f5f5;">
+                            <div class="booking-service-card">
                                 <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@packageData.PackageName</MudText>
-                                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="font-weight-bold">@PricePerSeat.ToString("N0") mmk <span style="font-size:0.7rem; font-weight:normal; color:gray;">/ person</span></MudText>
+                                <div class="service-price">
+                                    <strong>@PricePerSeat.ToString("N0") mmk</strong>
+                                    <span>per person</span>
+                                </div>
                             </div>
                             
-                            <div style="max-width: 200px;">
+                            <div class="package-quantity-field">
                                 <MudNumericField @bind-Value="Quantity" Label="Headcount" Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" />
                             </div>
                         }
                     </MudPaper>
 
                     <!-- Section 2: Guest Info -->
-                    <MudPaper Class="pa-4" Elevation="1" Style="border: 1px solid #e0e0e0;">
-                        <div class="d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Color="Color.Primary" Class="mr-2" Size="Size.Small"/>
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">2. Guest Details</MudText>
+                    <MudPaper Class="checkout-card" Elevation="0">
+                        <div class="checkout-section-head">
+                            <div class="checkout-step-icon">2</div>
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Class="checkout-section-title">Guest details</MudText>
+                                <MudText Typo="Typo.caption" Class="checkout-section-note">Use the same details you want on the booking voucher.</MudText>
+                            </div>
                         </div>
                         
                         <MudGrid Spacing="2">
@@ -648,44 +754,138 @@
                             </MudItem> *@
                         </MudGrid>
                     </MudPaper>
+
+                    <!-- Section 3: Payment Details -->
+                    <MudPaper Class="checkout-card mt-4" Elevation="0">
+                        <div class="checkout-section-head">
+                            <div class="checkout-step-icon">3</div>
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Class="checkout-section-title">Payment details</MudText>
+                                <MudText Typo="Typo.caption" Class="checkout-section-note">Transfer the exact amount and attach the slip screenshot.</MudText>
+                            </div>
+                        </div>
+
+                        <div class="payment-instruction">
+                            Transfer exactly <strong>@TotalAmount.ToString("N0") mmk</strong> to the selected account.
+                        </div>
+
+                        <!-- Payment Type Selector Cards -->
+                        <div class="payment-method-grid">
+                            @foreach (var pm in paymentMethods)
+                            {
+                                var isSelected = paymentType == pm.PaymentType;
+                                <div class="payment-method-card @(isSelected ? "selected" : "")" @onclick="() => SelectPaymentMethod(pm)">
+                                    <div class="payment-method-header">
+                                        <MudIcon Icon="@(pm.PaymentType switch {
+                                            "kpay" => Icons.Material.Filled.AccountBalance,
+                                            "wave" => Icons.Material.Filled.SendToMobile,
+                                            "aya" => Icons.Material.Filled.AccountBalance,
+                                            _ => Icons.Material.Filled.CreditCard
+                                        })" Color="@(isSelected ? Color.Primary : Color.Default)" Class="mr-2" />
+                                        <span class="payment-method-name">@(pm.PaymentType.ToUpper())</span>
+                                    </div>
+                                    @if (isSelected)
+                                    {
+                                        <span class="check-mark">✓</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        @if (selectedPaymentMethod != null)
+                        {
+                            <div class="admin-account-info-box">
+                                <div>
+                                    <span class="account-label">Account name</span>
+                                    <strong>@selectedPaymentMethod.AccountName</strong>
+                                </div>
+                                <div class="account-number-row">
+                                    <span class="account-label">Account number / phone</span>
+                                    <strong>@selectedPaymentMethod.AccountNumber</strong>
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" OnClick="CopyAccountNumber" />
+                                </div>
+                            </div>
+
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="transactionNo" Label="Last Transaction Slip No / Ref No" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" Placeholder="Enter reference code or last 6 digits" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <div class="d-flex flex-column">
+                                        <label style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Transfer Slip Screenshot *</label>
+                                        <div class="d-flex align-center gap-2">
+                                            <MudButton HtmlTag="label"
+                                                       Variant="Variant.Outlined"
+                                                       Color="Color.Primary"
+                                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                                       Style="text-transform: none; border-radius: 8px;">
+                                                Upload Screenshot
+                                                <InputFile id="fileInput" OnChange="OnInputFileChange" hidden accept="image/*" />
+                                            </MudButton>
+                                            @if (isUploadingImage)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                            }
+                                            else if (!string.IsNullOrEmpty(screenshotFileName))
+                                            {
+                                                <div class="d-flex align-center gap-1">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                                    <span style="font-size: 0.8rem; color: #0f172a; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@screenshotFileName</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                            @if (!string.IsNullOrEmpty(screenshotImage))
+                            {
+                                <div class="slip-preview">
+                                    <img src="@screenshotImage" />
+                                </div>
+                            }
+                        }
+                    </MudPaper>
                 </MudItem>
 
                 <!-- Right Column: Summary & Checkout -->
-                <MudItem xs="12" md="5" lg="4">
-                    <MudPaper Class="pa-4 position-sticky" Elevation="2" Style="top: 24px; border: 1px solid #e0e0e0; background-color: #fafafa;">
-                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-4 border-b pb-2">Order Summary</MudText>
+                <MudItem xs="12" md="5" lg="4" Class="checkout-summary-column">
+                    <MudPaper Class="checkout-summary-card position-sticky" Elevation="0" Style="top: 88px;">
+                        <div class="summary-card-head">
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Order summary</MudText>
+                            <span>@Type</span>
+                        </div>
 
                         @if (Type == "Bus" && busData != null)
                         {
-                            <div class="d-flex justify-space-between mb-2">
-                                <MudText Typo="Typo.body2">Bus Ticket</MudText>
-                                <MudText Typo="Typo.body2" Class="font-weight-bold">@busData.BusName</MudText>
+                            <div class="summary-row">
+                                <span>Bus ticket</span>
+                                <strong>@busData.BusName</strong>
                             </div>
-                            <div class="d-flex justify-space-between mb-2">
-                                <MudText Typo="Typo.body2">Seats (@SelectedSeats.Count)</MudText>
-                                <MudText Typo="Typo.body2" Class="font-weight-bold">@(SelectedSeats.Any() ? string.Join(", ", SelectedSeats) : "-")</MudText>
+                            <div class="summary-row">
+                                <span>Seats (@SelectedSeats.Count)</span>
+                                <strong>@(SelectedSeats.Any() ? string.Join(", ", SelectedSeats) : "-")</strong>
                             </div>
                         }
                         else if (Type == "Package" && packageData != null)
                         {
-                            <div class="d-flex justify-space-between mb-2">
-                                <MudText Typo="Typo.body2">Package</MudText>
-                                <MudText Typo="Typo.body2" Class="font-weight-bold">@packageData.PackageName</MudText>
+                            <div class="summary-row">
+                                <span>Package</span>
+                                <strong>@packageData.PackageName</strong>
                             </div>
-                            <div class="d-flex justify-space-between mb-2">
-                                <MudText Typo="Typo.body2">Guests</MudText>
-                                <MudText Typo="Typo.body2" Class="font-weight-bold">@Quantity</MudText>
+                            <div class="summary-row">
+                                <span>Guests</span>
+                                <strong>@Quantity</strong>
                             </div>
                         }
 
-                        <div class="d-flex justify-space-between mb-3 border-b pb-3">
-                            <MudText Typo="Typo.body2">Date</MudText>
-                            <MudText Typo="Typo.body2" Class="font-weight-bold">@(TravelDateValue?.ToString("dd-MM-yyyy") ?? "-")</MudText>
+                        <div class="summary-row summary-row-bordered">
+                            <span>Date</span>
+                            <strong>@(TravelDateValue?.ToString("dd-MM-yyyy") ?? "-")</strong>
                         </div>
 
-                        <div class="d-flex justify-space-between align-center mb-4">
-                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Total</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">@TotalAmount.ToString("N0") mmk</MudText>
+                        <div class="summary-total-row">
+                            <span>Total</span>
+                            <strong>@TotalAmount.ToString("N0") mmk</strong>
                         </div>
 
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
@@ -705,13 +905,14 @@
                         
                         @if (!CanConfirm && !IsSubmitting)
                         {
-                            <MudText Typo="Typo.caption" Class="d-block text-center mt-2" Color="Color.Error">
+                            <MudText Typo="Typo.caption" Class="summary-helper">
                                 Complete selection and details to proceed.
                             </MudText>
                         }
                     </MudPaper>
                 </MudItem>
             </MudGrid>
+            </div>
         }
     }
 </MudContainer>
@@ -727,6 +928,14 @@
     private bool IsSubmitting = false;
     private bool IsBookingConfirmed = false;
     private string? ErrorMessage;
+
+    private List<PaymentMethodResponseModel> paymentMethods = new();
+    private PaymentMethodResponseModel? selectedPaymentMethod;
+    private string? paymentType;
+    private string? transactionNo;
+    private string? screenshotImage;
+    private string? screenshotFileName;
+    private bool isUploadingImage = false;
 
     private BusResponseModel? busData;
     private HotelResponseModel? hotelResponseData;
@@ -772,12 +981,29 @@
                TravelDateValue.HasValue;
     }
 
-    private bool CanConfirm => IsGuestInfoValid() && IsSelectionValid && !IsSubmitting;
+    private bool IsPaymentInfoValid()
+    {
+        return !string.IsNullOrWhiteSpace(paymentType) &&
+               !string.IsNullOrWhiteSpace(transactionNo) &&
+               !string.IsNullOrWhiteSpace(screenshotImage);
+    }
+
+    private bool CanConfirm => IsGuestInfoValid() && IsSelectionValid && IsPaymentInfoValid() && !IsSubmitting && !isUploadingImage;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            try
+            {
+                var methods = await Http.GetFromJsonAsync<List<PaymentMethodResponseModel>>("api/payment/methods");
+                paymentMethods = methods ?? new();
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("Failed to load payment methods.", Severity.Error);
+            }
+
             if (ItemId.HasValue)
             {
                 if (Type == "Bus")
@@ -997,7 +1223,10 @@
             BookingType = Type,
             TravelDate = DateOnly.FromDateTime(TravelDateValue!.Value),
             TotalAmount = TotalAmount,
-            Quantity = Type == "Bus" ? SelectedSeats.Count : Quantity
+            Quantity = Type == "Bus" ? SelectedSeats.Count : Quantity,
+            PaymentType = paymentType,
+            TransactionNo = transactionNo,
+            ScreenshotImage = screenshotImage
         };
 
         if (Type == "Bus")
@@ -1037,6 +1266,66 @@
         finally
         {
             IsSubmitting = false;
+        }
+    }
+
+    private void SelectPaymentMethod(PaymentMethodResponseModel pm)
+    {
+        selectedPaymentMethod = pm;
+        paymentType = pm.PaymentType;
+        Snackbar.Add($"Selected {pm.PaymentType.ToUpper()} payment method.", Severity.Success);
+    }
+
+    private async Task CopyAccountNumber()
+    {
+        if (selectedPaymentMethod != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", selectedPaymentMethod.AccountNumber);
+            Snackbar.Add("Account number copied to clipboard!", Severity.Info);
+        }
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            isUploadingImage = true;
+            StateHasChanged();
+            try
+            {
+                if (file.Size > 2 * 1024 * 1024)
+                {
+                    Snackbar.Add("File size must be less than 2MB.", Severity.Error);
+                    return;
+                }
+
+                if (!file.ContentType.StartsWith("image/"))
+                {
+                    Snackbar.Add("Only image files are allowed.", Severity.Error);
+                    return;
+                }
+
+                screenshotFileName = file.Name;
+                
+                var buffer = new byte[file.Size];
+                using (var stream = file.OpenReadStream(2 * 1024 * 1024))
+                {
+                    await stream.ReadAsync(buffer);
+                }
+                
+                screenshotImage = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                Snackbar.Add("Payment slip imported successfully.", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to import file: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
         }
     }
 }
