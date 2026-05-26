@@ -2,6 +2,7 @@
 @layout DotNet8.EasyTrip.App.Client.Layout.PublicLayout
 @using MudBlazor
 @using DotNet8.EasyTripBackendApi.Models
+@using DotNet8.EasyTrip.App.Client.Services
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
@@ -21,15 +22,33 @@
     }
     else if (IsBookingConfirmed)
     {
-        <MudPaper Class="pa-8 text-center mx-auto" Style="max-width: 500px;" Elevation="2">
+        <MudPaper Class="pa-8 text-center mx-auto" Style="max-width: 420px;" Elevation="2">
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 4rem;" Class="mb-3" />
             <MudText Typo="Typo.h5" Class="font-weight-bold mb-2">Booking Confirmed!</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
-                Your booking is placed. Details sent to <strong>@GuestEmail</strong>. 
-                Pending admin approval.
+            @* @if (_confirmedBooking != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                    Ticket ref: <strong>@BookingTicketService.GetTicketReference(_confirmedBooking.Id)</strong>
+                </MudText>
+            }
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Your booking is placed. Details sent to <strong>@GuestEmail</strong>.
+                Pending admin approval — your QR ticket will be valid after confirmation.
             </MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/my-bookings" Class="px-8">
-                View Bookings
+            @if (!string.IsNullOrEmpty(_successQrDataUrl))
+            {
+                <div style="margin: 0 auto 20px;">
+                    <img src="@_successQrDataUrl" alt="Booking QR" style="width:200px;height:200px;border:4px solid #10b981;border-radius:14px;" />
+                    <MudText Typo="Typo.caption" Style="color:#64748b; margin-top:8px;">Save this QR · show at check-in after approval</MudText>
+                </div>
+            }
+            else if (_confirmedBooking != null)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mb-4" />
+            } *@
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="px-8"
+                       OnClick="@(() => Navigation.NavigateTo($"/my-bookings?phone={Uri.EscapeDataString(GuestPhone)}"))">
+                View My Bookings
             </MudButton>
         </MudPaper>
     }
@@ -432,7 +451,7 @@
                                             </MudItem>
                                             <MudItem xs="12" sm="6">
                                                 <div class="d-flex flex-column">
-                                                    <label style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Transfer Slip Screenshot *</label>
+                                                    @* <label style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Transfer Slip Screenshot *</label> *@
                                                     <div class="d-flex align-center gap-2">
                                                         <MudButton HtmlTag="label"
                                                                    Variant="Variant.Outlined"
@@ -927,6 +946,8 @@
     private bool isLoading = true;
     private bool IsSubmitting = false;
     private bool IsBookingConfirmed = false;
+    private BookingResponseModel? _confirmedBooking;
+    private string? _successQrDataUrl;
     private string? ErrorMessage;
 
     private List<PaymentMethodResponseModel> paymentMethods = new();
@@ -1245,11 +1266,24 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/public/bookings", request);
+            var response = await Http.PostAsJsonAsync("api/public/booking", request);
             
             if (response.IsSuccessStatusCode)
             {
+                _confirmedBooking = await response.Content.ReadFromJsonAsync<BookingResponseModel>();
                 IsBookingConfirmed = true;
+                if (_confirmedBooking != null)
+                {
+                    try
+                    {
+                        _successQrDataUrl = await BookingTicketService.GenerateQrDataUrlAsync(
+                            JSRuntime, _confirmedBooking, GuestPhone);
+                    }
+                    catch
+                    {
+                        _successQrDataUrl = null;
+                    }
+                }
             }
             else
             {

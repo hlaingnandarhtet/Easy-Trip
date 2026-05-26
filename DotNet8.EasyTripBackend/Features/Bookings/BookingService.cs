@@ -638,6 +638,30 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             }
         }
 
+        public async Task<BookingResponseModel?> UseTicketAsync(long id)
+        {
+            var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id && b.DeletedAt == null);
+            if (existingBooking == null) return null;
+
+            if (existingBooking.BookingStatus != BookingStatusCodes.Confirmed)
+            {
+                throw new Exception("Ticket must be confirmed before it can be scanned/used.");
+            }
+
+            if (existingBooking.IsUsed)
+            {
+                throw new Exception("This ticket has already been scanned/used!");
+            }
+
+            existingBooking.IsUsed = true;
+            existingBooking.UpdatedAt = DateTime.UtcNow;
+
+            _context.Bookings.Update(existingBooking);
+            await _context.SaveChangesAsync();
+
+            return await GetBookingByIdAsync(id);
+        }
+
         private async Task<List<BookingResponseModel>> MapBookingsAsync(List<DotNet8.EasyTripBackendApi.DbService.Models.Booking> bookings)
         {
             if (bookings == null || !bookings.Any())
@@ -776,6 +800,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                     PaymentStatus = (PaymentStatus)(b.PaymentStatus ?? 0),
                     BookingStatus = (BookingStatus)(b.BookingStatus ?? 0),
                     BookingStatusCode = b.BookingStatus ?? 0,
+                    IsUsed = b.IsUsed,
                     CreatedAt = b.CreatedAt,
                     UpdatedAt = b.UpdatedAt,
                     DeletedAt = b.DeletedAt,

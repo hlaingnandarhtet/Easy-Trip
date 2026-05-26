@@ -49,6 +49,7 @@ namespace DotNet8.EasyTripBackendApi.Models
         public BookingStatus BookingStatus { get; set; }
         /// <summary>Raw DB status code (1=Pending, 2=Confirmed, 3=Rejected).</summary>
         public int BookingStatusCode { get; set; }
+        public bool IsUsed { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

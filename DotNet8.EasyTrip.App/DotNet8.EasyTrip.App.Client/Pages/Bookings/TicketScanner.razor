@@ -1,0 +1,225 @@
+@page "/bookings/scan"
+@using DotNet8.EasyTripBackendApi.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@rendermode InteractiveWebAssembly
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="et-page">
+    <PageHeader Title="Scan & Verify Ticket"
+                Subtitle="Verify tickets by entering reference number or scanning QR code to prevent reuse."
+                Icon="@Icons.Material.Filled.QrCodeScanner" />
+
+    <MudGrid Class="mt-2">
+        <MudItem xs="12">
+            <MudPaper Class="pa-6 et-table-card" Elevation="0">
+                <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0F172A;" Class="mb-4">Enter Ticket Details</MudText>
+                
+                <div class="d-flex align-center gap-3">
+                    <MudTextField @bind-Value="_searchCode" 
+                                  Label="Ticket Reference or Booking ID" 
+                                  Placeholder="e.g. ET-00000123 or 123" 
+                                  Variant="Variant.Outlined" 
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.ConfirmationNumber"
+                                  Immediate="true"
+                                  OnKeyDown="HandleKeyDown"
+                                  Disabled="_searching" />
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Class="et-btn-primary" 
+                               Style="height: 56px; text-transform: none; font-weight: 600; border-radius: 10px; min-width: 120px;"
+                               OnClick="VerifyTicket"
+                               Disabled="@(string.IsNullOrWhiteSpace(_searchCode) || _searching)"
+                               StartIcon="@Icons.Material.Filled.Search">
+                        @if (_searching)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                            <span>Verifying...</span>
+                        }
+                        else
+                        {
+                            <span>Verify</span>
+                        }
+                    </MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        @if (_searched && _booking == null)
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="rounded-lg">
+                    Ticket not found. Please verify the ticket code and try again.
+                </MudAlert>
+            </MudItem>
+        }
+
+        @if (_booking != null)
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-6 et-table-card" Elevation="0">
+                    <div class="d-flex flex-column gap-4">
+                        @if (_booking.IsUsed)
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Cancel" Class="rounded-lg py-4">
+                                <div class="d-flex flex-column">
+                                    <MudText Style="font-weight: 800; font-size: 1.1rem;">TICKET ALREADY USED</MudText>
+                                    <MudText Style="font-size: 0.9rem;">This ticket was already scanned and used. Do NOT allow passenger boarding!</MudText>
+                                    <MudText Style="font-size: 0.8rem;" Class="mt-1">Last Scanned / Updated: @_booking.UpdatedAt?.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")</MudText>
+                                </div>
+                            </MudAlert>
+                        }
+                        else if (_booking.BookingStatusCode != 2) // 2 = Confirmed
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Warning" Class="rounded-lg py-4">
+                                <div class="d-flex flex-column">
+                                    <MudText Style="font-weight: 800; font-size: 1.1rem;">TICKET NOT CONFIRMED</MudText>
+                                    <MudText Style="font-size: 0.9rem;">This booking status is @GetBookingStatusText(_booking.BookingStatusCode). It cannot be used yet.</MudText>
+                                </div>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Icon="@Icons.Material.Filled.CheckCircle" Class="rounded-lg py-4">
+                                <div class="d-flex flex-column">
+                                    <MudText Style="font-weight: 800; font-size: 1.1rem;">VALID TICKET</MudText>
+                                    <MudText Style="font-size: 0.9rem;">This ticket is confirmed and ready for boarding.</MudText>
+                                </div>
+                            </MudAlert>
+                        }
+
+                        <BookingExpandDetails Booking="_booking" Title="Ticket Information" ShowBookedOn="true" />
+
+                        @if (!_booking.IsUsed && _booking.BookingStatusCode == 2)
+                        {
+                            <div class="d-flex justify-end mt-2">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Success" 
+                                           Size="Size.Large"
+                                           Style="background-color: #10B981 !important; color: white; text-transform: none; font-weight: 700; border-radius: 10px; padding: 12px 32px;"
+                                           OnClick="MarkAsUsed"
+                                           Disabled="_processing"
+                                           StartIcon="@Icons.Material.Filled.QrCodeScanner">
+                                    @if (_processing)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                                        <span>Processing Check-In...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Check-In Passenger (Mark as Used)</span>
+                                    }
+                                </MudButton>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string _searchCode = "";
+    private bool _searching = false;
+    private bool _searched = false;
+    private bool _processing = false;
+    private BookingResponseModel? _booking = null;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await VerifyTicket();
+        }
+    }
+
+    private async Task VerifyTicket()
+    {
+        if (string.IsNullOrWhiteSpace(_searchCode)) return;
+
+        _searching = true;
+        _searched = false;
+        _booking = null;
+        StateHasChanged();
+
+        try
+        {
+            long bookingId = 0;
+            var cleanInput = _searchCode.Trim();
+
+            if (cleanInput.StartsWith("ET-", StringComparison.OrdinalIgnoreCase))
+            {
+                long.TryParse(cleanInput.Substring(3), out bookingId);
+            }
+            else
+            {
+                long.TryParse(cleanInput, out bookingId);
+            }
+
+            if (bookingId > 0)
+            {
+                var response = await Http.GetAsync($"api/booking/{bookingId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    _booking = await response.Content.ReadFromJsonAsync<BookingResponseModel>();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error looking up ticket: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _searching = false;
+            _searched = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MarkAsUsed()
+    {
+        if (_booking == null || _booking.IsUsed || _booking.BookingStatusCode != 2) return;
+
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.PostAsync($"api/admin/booking/use-ticket/{_booking.Id}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Passenger successfully checked in!", Severity.Success);
+                _booking = await response.Content.ReadFromJsonAsync<BookingResponseModel>();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to check in: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error during check-in: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetBookingStatusText(int statusCode)
+    {
+        return statusCode switch
+        {
+            1 => "Pending Approval",
+            2 => "Confirmed",
+            3 => "Rejected",
+            _ => "Unknown"
+        };
+    }
+}

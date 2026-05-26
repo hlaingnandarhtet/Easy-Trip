@@ -161,7 +161,7 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Bookings
             _processingId = id;
             try
             {
-                var response = await Http.PostAsync($"api/admin/bookings/confirm/{id}", null);
+                var response = await Http.PostAsync($"api/admin/booking/confirm/{id}", null);
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Booking confirmed.", Severity.Success);
@@ -185,7 +185,7 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Bookings
             _processingId = id;
             try
             {
-                var response = await Http.PostAsync($"api/admin/bookings/reject/{id}", null);
+                var response = await Http.PostAsync($"api/admin/booking/reject/{id}", null);
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Booking rejected. Bus seats are available again.", Severity.Info);

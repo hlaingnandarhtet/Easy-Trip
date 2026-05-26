@@ -29,6 +29,8 @@ public partial class Booking
 
     public DateTime? DeletedAt { get; set; }
 
+    public bool IsUsed { get; set; }
+
     public virtual User? User { get; set; }
 
     public virtual ICollection<BookingDetail> BookingDetails { get; set; } = new List<BookingDetail>();

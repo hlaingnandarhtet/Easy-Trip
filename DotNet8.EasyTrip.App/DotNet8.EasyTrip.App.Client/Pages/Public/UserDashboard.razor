@@ -5,6 +5,7 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <style>
     .my-bookings-page {
@@ -88,6 +89,49 @@
     }
 
     .download-btn:hover { opacity: 0.88; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+
+    .qr-btn {
+        background: #fff;
+        color: #0f172a;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        cursor: pointer;
+        margin-right: 6px;
+    }
+
+    .qr-btn:hover { border-color: #10b981; color: #059669; }
+
+    .qr-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .qr-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px 28px;
+        max-width: 360px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .qr-card img {
+        width: 220px;
+        height: 220px;
+        border: 4px solid #10b981;
+        border-radius: 14px;
+        margin: 16px 0;
+    }
 
     .empty-bookings {
         text-align: center;
@@ -213,7 +257,7 @@
                                 <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">AMOUNT</MudTh>
                                 <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">PAYMENT</MudTh>
                                 <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem;">STATUS</MudTh>
-                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem; text-align:right;">INVOICE</MudTh>
+                                <MudTh Style="font-weight:700; color:#64748b; font-size:0.8rem; text-align:right;">TICKET</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="Invoice ID">
@@ -246,12 +290,13 @@
                                         @GetStatusLabel(context.BookingStatusCode)
                                     </span>
                                 </MudTd>
-                                <MudTd DataLabel="Invoice" Style="text-align:right;">
+                                <MudTd DataLabel="Ticket" Style="text-align:right;">
                                     @if (context.BookingStatusCode == 2) // Confirmed
                                     {
-                                        <button class="download-btn" @onclick="() => DownloadInvoice(context)">
+                                        <button type="button" class="qr-btn" @onclick="() => ShowQrTicket(context)">QR</button>
+                                        <button type="button" class="download-btn" @onclick="() => DownloadInvoice(context)">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                            Download
+                                            Print
                                         </button>
                                     }
                                     else
@@ -271,12 +316,53 @@
     </MudContainer>
 </div>
 
+@if (_showQrDialog && _qrBooking != null)
+{
+    <div class="qr-overlay" @onclick="CloseQrDialog">
+        <div class="qr-card" @onclick:stopPropagation="true">
+            <MudText Typo="Typo.h6" Style="font-weight:800; color:#0f172a;">QR Boarding Ticket</MudText>
+            <MudText Typo="Typo.caption" Style="color:#64748b;">
+                @BookingTicketService.GetTicketReference(_qrBooking.Id) · @_qrBooking.BookingType
+            </MudText>
+            @if (string.IsNullOrEmpty(_qrDataUrl))
+            {
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Class="my-6" />
+            }
+            else
+            {
+                <img src="@_qrDataUrl" alt="QR ticket" />
+            }
+            <MudText Typo="Typo.body2" Style="color:#334155; font-weight:600;">@GetItemDescription(_qrBooking)</MudText>
+            <MudText Typo="Typo.caption" Style="color:#64748b; margin-top:4px;">
+                Travel: @_qrBooking.TravelDate.ToString("dd MMM yyyy")
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="CloseQrDialog" Style="border-radius:10px;">
+                Close
+            </MudButton>
+        </div>
+    </div>
+}
+
+@using DotNet8.EasyTrip.App.Client.Services
+
 @code {
+    [SupplyParameterFromQuery(Name = "phone")]
+    public string? PhoneQuery { get; set; }
+
     private bool _isAuthenticated = false;
     private bool _loading = false;
     private string _phoneInput = "";
     private string? _errorMessage;
     private List<BookingResponseModel> _bookings = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(PhoneQuery) && !_isAuthenticated)
+        {
+            _phoneInput = PhoneQuery;
+            await LookupBookings();
+        }
+    }
 
     private async Task HandleEnterKey(KeyboardEventArgs e)
     {
@@ -293,7 +379,7 @@
         try
         {
             var result = await Http.GetFromJsonAsync<List<BookingResponseModel>>(
-                $"api/public/bookings/by-phone/{Uri.EscapeDataString(_phoneInput.Trim())}");
+                $"api/public/booking/by-phone/{Uri.EscapeDataString(_phoneInput.Trim())}");
 
             _bookings = result ?? new();
             _isAuthenticated = true;

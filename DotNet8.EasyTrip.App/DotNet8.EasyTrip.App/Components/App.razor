@@ -161,6 +161,7 @@
 
     <DotNet8.EasyTrip.App.Client.Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="qrcode.min.js"></script>
     <script>
         window.easyTripScroll = {
             scrollById: function (elementId, amount) {
@@ -184,6 +185,24 @@
                     document.body.removeChild(a);
                 }
                 setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+            }
+        };
+        window.easyTripQr = {
+            toDataUrl: function (text, size) {
+                return new Promise(function (resolve, reject) {
+                    if (typeof QRCode === 'undefined') {
+                        reject('QR code library not loaded');
+                        return;
+                    }
+                    QRCode.toDataURL(text, {
+                        width: size || 220,
+                        margin: 2,
+                        color: { dark: '#0f172a', light: '#ffffff' }
+                    }, function (err, url) {
+                        if (err) reject(err.message || String(err));
+                        else resolve(url);
+                    });
+                });
             }
         };
         window.easyTripDownloads = {

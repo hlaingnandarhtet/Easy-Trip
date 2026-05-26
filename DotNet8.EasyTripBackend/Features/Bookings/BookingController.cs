@@ -159,6 +159,21 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpPost("/api/admin/booking/use-ticket/{id}")]
+        public async Task<ActionResult<BookingResponseModel>> UseTicket(long id)
+        {
+            try
+            {
+                var result = await _bookingService.UseTicketAsync(id);
+                if (result == null) return NotFound("Booking not found");
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 
     public class UpdateBookingStatusRequest

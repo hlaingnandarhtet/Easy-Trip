@@ -82,6 +82,9 @@ public partial class AppDbContext : DbContext
                 .HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+            entity.Property(e => e.IsUsed)
+                .HasDefaultValue(false)
+                .HasColumnName("is_used");
             entity.Property(e => e.ItemId).HasColumnName("item_id").IsRequired(false);
             entity.Property(e => e.PaymentStatus)
                 .HasDefaultValue(0)

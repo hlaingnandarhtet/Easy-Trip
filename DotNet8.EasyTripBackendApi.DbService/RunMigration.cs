@@ -21,6 +21,7 @@ class Program
             var sql = @"
             ALTER TABLE buses ADD COLUMN IF NOT EXISTS departure character varying(100) NULL;
             ALTER TABLE buses ADD COLUMN IF NOT EXISTS arrival character varying(100) NULL;
+            ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_used boolean NOT NULL DEFAULT false;
             ";
             
             await db.Database.ExecuteSqlRawAsync(sql);
