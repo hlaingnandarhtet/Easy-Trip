@@ -10,7 +10,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.Dashboard
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/dashboard")]
     public class DashboardController : ControllerBase
     {
         private readonly AppDbContext _context;

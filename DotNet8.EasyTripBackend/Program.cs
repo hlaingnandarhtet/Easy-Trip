@@ -1,4 +1,6 @@
 
+using Microsoft.EntityFrameworkCore;
+using DotNet8.EasyTripBackendApi.DbService;
 using DotNet8.EasyTripBackend.Features.Hotels;
 using DotNet8.EasyTripBackend.Features.HotelRooms;
 using DotNet8.EasyTripBackend.Features.RoomTypes;
@@ -13,6 +15,10 @@ namespace DotNet8.EasyTripBackend
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
 
             // Add services to the container.
             builder.Services.AddControllers();
@@ -29,8 +35,21 @@ namespace DotNet8.EasyTripBackend
                 });
             });
             
-            // Register DbContext and Services
-            builder.Services.AddDbContext<DotNet8.EasyTripBackendApi.DbService.Models.AppDbContext>();
+            // Register DbContext and Services (pooler host avoids IPv6-only DNS issues on Windows)
+            var pooler = builder.Configuration.GetConnectionString("PoolerConnection");
+            var connectionString = Environment.GetEnvironmentVariable("EASYTRIP_CONNECTION_STRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                connectionString = !string.IsNullOrWhiteSpace(pooler)
+                    ? pooler
+                    : builder.Configuration.GetConnectionString("DefaultConnection");
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException(
+                    "Database connection is not configured. Set ConnectionStrings:PoolerConnection in appsettings.json (Session pooler URI from Supabase Dashboard), or EASYTRIP_CONNECTION_STRING.");
+
+            connectionString = DatabaseConnection.Resolve(connectionString);
+            builder.Services.AddDbContext<DotNet8.EasyTripBackendApi.DbService.Models.AppDbContext>(options =>
+                options.UseNpgsql(connectionString));
             builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.Bus.IBusService, DotNet8.EasyTripBackend.Features.Bus.BusService>();
             builder.Services.AddScoped<DotNet8.EasyTripBackend.Features.Hotels.IHotelService, DotNet8.EasyTripBackend.Features.Hotels.HotelService>();
             builder.Services.AddScoped<IHotelRoomService, HotelRoomService>();
@@ -88,11 +107,24 @@ namespace DotNet8.EasyTripBackend
                 try
                 {
                     var context = services.GetRequiredService<DotNet8.EasyTripBackendApi.DbService.Models.AppDbContext>();
+                    if (!context.Database.CanConnectAsync().GetAwaiter().GetResult())
+                        throw new InvalidOperationException("Database.CanConnectAsync returned false.");
+
                     DbSeeder.SeedAsync(context).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error seeding lookup database tables: {ex.Message}");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("DATABASE CONNECTION FAILED — API requests will return 500.");
+                    Console.WriteLine(ex.GetBaseException().Message);
+                    if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("PoolerConnection")))
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Fix: Supabase Dashboard → Project Settings → Database → copy the");
+                        Console.WriteLine("     \"Session pooler\" connection string into appsettings.json:");
+                        Console.WriteLine("     ConnectionStrings:PoolerConnection");
+                    }
+                    Console.ResetColor();
                 }
             }
 

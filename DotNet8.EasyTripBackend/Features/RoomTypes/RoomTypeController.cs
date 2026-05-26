@@ -6,7 +6,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.RoomTypes
 {
     [ApiController]
-    [Route("api/roomtypes")]
+    [Route("api/roomtype")]
     public class RoomTypeController : ControllerBase
     {
         private readonly IRoomTypeService _roomTypeService;
@@ -31,14 +31,14 @@ namespace DotNet8.EasyTripBackend.Features.RoomTypes
             return Ok(result);
         }
 
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<ActionResult<RoomTypeResponseModel>> CreateRoomType([FromBody] RoomTypeRequestModel request)
         {
             var result = await _roomTypeService.CreateRoomTypeAsync(request);
             return CreatedAtAction(nameof(GetRoomType), new { id = result.Id }, result);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id}/update")]
         public async Task<ActionResult<RoomTypeResponseModel>> UpdateRoomType(long id, [FromBody] RoomTypeRequestModel request)
         {
             var success = await _roomTypeService.UpdateRoomTypeAsync(id, request);
@@ -46,7 +46,7 @@ namespace DotNet8.EasyTripBackend.Features.RoomTypes
             return Ok(await _roomTypeService.GetRoomTypeByIdAsync(id));
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id}/delete")]
         public async Task<IActionResult> DeleteRoomType(long id)
         {
             var success = await _roomTypeService.DeleteRoomTypeAsync(id);

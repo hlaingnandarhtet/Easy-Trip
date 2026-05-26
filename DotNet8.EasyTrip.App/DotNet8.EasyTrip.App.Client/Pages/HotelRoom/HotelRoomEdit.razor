@@ -103,7 +103,7 @@
     {
         try
         {
-            var typesTask = Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtypes");
+            var typesTask = Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtype");
             var roomTask = Http.GetFromJsonAsync<HotelRoomResponseModel>($"api/room/{Id}");
             
             await Task.WhenAll(typesTask, roomTask);

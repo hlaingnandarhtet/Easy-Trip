@@ -6,7 +6,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.Bookings
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/booking")]
     public class BookingController : ControllerBase
     {
         private readonly IBookingService _bookingService;
@@ -106,7 +106,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             return NoContent();
         }
 
-        [HttpGet("/api/public/bookings/by-phone/{phone}")]
+        [HttpGet("/api/public/booking/by-phone/{phone}")]
         public async Task<ActionResult<List<BookingResponseModel>>> GetBookingsByPhone(string phone)
         {
             if (string.IsNullOrWhiteSpace(phone))
@@ -116,7 +116,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             return Ok(result);
         }
 
-        [HttpPost("/api/public/bookings")]
+        [HttpPost("/api/public/booking")]
         public async Task<ActionResult<BookingResponseModel>> CreatePublicBooking([FromBody] PublicBookingRequestModel request)
         {
             try
@@ -130,7 +130,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             }
         }
 
-        [HttpPost("/api/admin/bookings/confirm/{id}")]
+        [HttpPost("/api/admin/booking/confirm/{id}")]
         public async Task<ActionResult<BookingResponseModel>> ConfirmBooking(long id)
         {
             try
@@ -145,7 +145,7 @@ namespace DotNet8.EasyTripBackend.Features.Bookings
             }
         }
 
-        [HttpPost("/api/admin/bookings/reject/{id}")]
+        [HttpPost("/api/admin/booking/reject/{id}")]
         public async Task<ActionResult<BookingResponseModel>> RejectBooking(long id)
         {
             try

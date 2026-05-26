@@ -5,7 +5,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.BusTypes;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/busType")]
 public class BusTypeController : ControllerBase
 {
     private readonly IBusTypeService _service;
@@ -39,7 +39,7 @@ public class BusTypeController : ControllerBase
         return CreatedAtAction(nameof(GetBusType), new { id = created.Id }, created);
     }
 
-    [HttpPut("{id}/updates")]
+    [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdateBusType(long id, [FromBody] BusTypeRequestModel request)
     {
         if (string.IsNullOrWhiteSpace(request.TypeName)) return BadRequest("TypeName is required.");

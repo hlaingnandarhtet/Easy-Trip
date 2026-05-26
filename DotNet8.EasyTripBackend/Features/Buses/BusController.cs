@@ -9,7 +9,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.Bus
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/bus")]
     public class BusController : ControllerBase
     {
         private readonly IBusService _busService;
@@ -39,7 +39,7 @@ namespace DotNet8.EasyTripBackend.Features.Bus
             return Ok(result);
         }
 
-        [HttpGet("{id}/reserved-seats")]
+        [HttpGet("{id}/reserved-seat")]
         public async Task<ActionResult<List<string>>> GetReservedSeats(long id, [FromQuery] DateOnly travelDate)
         {
             var bus = await _busService.GetBusAsync(id);

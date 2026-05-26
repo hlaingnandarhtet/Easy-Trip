@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using DotNet8.EasyTrip.App.Client.Services;
 using DotNet8.EasyTripBackendApi.Models;
 
 namespace DotNet8.EasyTrip.App.Client.Pages.Reports
@@ -12,8 +13,10 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Reports
     public partial class SalesRevenueReport
     {
         [Inject] private HttpClient Http { get; set; } = null!;
+        [Inject] private ReportExportService Exporter { get; set; } = null!;
 
         private bool _isLoading = true;
+        private string? _errorMessage;
         private SalesRevenueReportModel? _report;
         private DateTime? _startDate;
         private DateTime? _endDate = DateTime.Today;
@@ -44,18 +47,28 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Reports
             StateHasChanged();
             try
             {
-                var url = "api/reports/sales-revenue";
+                var url = "api/report/sale-revenue";
                 if (_startDate.HasValue)
                     url += $"?startDate={_startDate.Value:yyyy-MM-dd}";
                 if (_endDate.HasValue)
                     url += (_startDate.HasValue ? "&" : "?") + $"endDate={_endDate.Value:yyyy-MM-dd}";
 
-                _report = await Http.GetFromJsonAsync<SalesRevenueReportModel>(url);
+                var response = await Http.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _errorMessage = await response.Content.ReadAsStringAsync();
+                    _report = null;
+                    return;
+                }
+
+                _report = await response.Content.ReadFromJsonAsync<SalesRevenueReportModel>();
+                _errorMessage = null;
                 UpdateCharts();
             }
             catch (Exception ex)
             {
                 Console.WriteLine("SalesRevenueReport: " + ex.Message);
+                _errorMessage = ex.Message;
                 _report = null;
             }
             finally
@@ -100,5 +113,54 @@ namespace DotNet8.EasyTrip.App.Client.Pages.Reports
 
         private static string FormatGrowth(double pct) =>
             pct >= 0 ? $"+{pct:F1}%" : $"{pct:F1}%";
+
+        private async Task ExportExcelAsync()
+        {
+            if (_report == null) return;
+
+            await Exporter.DownloadExcelAsync(
+                "Sales & Revenue Report",
+                $"sales-revenue-{_report.StartDate:yyyyMMdd}-{_report.EndDate:yyyyMMdd}",
+                BuildExportRows());
+        }
+
+        private async Task ExportPdfAsync()
+        {
+            if (_report == null) return;
+
+            await Exporter.DownloadPdfAsync(
+                "Sales & Revenue Report",
+                $"sales-revenue-{_report.StartDate:yyyyMMdd}-{_report.EndDate:yyyyMMdd}",
+                BuildSummaryLines(),
+                BuildExportRows());
+        }
+
+        private IEnumerable<string> BuildSummaryLines()
+        {
+            if (_report == null) yield break;
+
+            yield return $"Period: {_report.StartDate:dd-MM-yyyy} to {_report.EndDate:dd-MM-yyyy}";
+            yield return $"Total Revenue: {ReportExportService.Money(_report.TotalRevenue)}";
+            yield return $"Previous Period Revenue: {ReportExportService.Money(_report.PreviousPeriodRevenue)}";
+            yield return $"Growth: {FormatGrowth(_report.RevenueGrowthPercentage)}";
+            yield return $"Paid Transactions: {_report.PaidTransactionCount}";
+        }
+
+        private IEnumerable<string[]> BuildExportRows()
+        {
+            if (_report == null) yield break;
+
+            yield return new[] { "Type", "Transactions", "Revenue", "Share" };
+            foreach (var item in _report.RevenueByType)
+            {
+                yield return new[]
+                {
+                    item.Type,
+                    item.TransactionCount.ToString(),
+                    ReportExportService.Money(item.Amount),
+                    $"{item.Percentage:F1}%"
+                };
+            }
+        }
     }
 }

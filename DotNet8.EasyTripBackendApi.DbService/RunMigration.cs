@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using DotNet8.EasyTripBackendApi.DbService;
 using DotNet8.EasyTripBackendApi.DbService.Models;
 
 class Program
@@ -9,7 +10,9 @@ class Program
     static async Task Main(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseNpgsql("Host=db.zjjmggyrlhgbdyormcup.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=2612000@#$!!$;Ssl Mode=Require;Trust Server Certificate=true;");
+        var raw = Environment.GetEnvironmentVariable("EASYTRIP_CONNECTION_STRING")
+            ?? "Host=db.zjjmggyrlhgbdyormcup.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=2612000@#$!!$;Ssl Mode=Require;Trust Server Certificate=true;";
+        optionsBuilder.UseNpgsql(DatabaseConnection.Resolve(raw));
 
         using var db = new AppDbContext(optionsBuilder.Options);
         

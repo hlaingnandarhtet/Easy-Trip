@@ -39,10 +39,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<BookingPayment> BookingPayments { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=db.zjjmggyrlhgbdyormcup.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=2612000@#$!!$;Ssl Mode=Require;Trust Server Certificate=true;");
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder

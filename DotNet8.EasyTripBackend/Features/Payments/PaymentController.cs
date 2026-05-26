@@ -6,7 +6,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.Payments
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payment")]
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
@@ -43,7 +43,7 @@ namespace DotNet8.EasyTripBackend.Features.Payments
             return CreatedAtAction(nameof(GetPaymentMethod), new { id = created.Id }, created);
         }
 
-        [HttpPut("{id}/updates")]
+        [HttpPut("{id}/update")]
         public async Task<IActionResult> UpdatePaymentMethod(long id, [FromBody] PaymentMethodRequestModel request)
         {
             if (string.IsNullOrWhiteSpace(request.PaymentType)) return BadRequest("PaymentType is required.");

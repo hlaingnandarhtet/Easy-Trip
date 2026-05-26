@@ -16,6 +16,16 @@
                        Style="height:40px; text-transform:none; font-weight:600; border-radius:10px;">
                 Apply
             </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Success" Disabled="@(_report == null || _isLoading)"
+                       OnClick="ExportExcelAsync" StartIcon="@Icons.Material.Filled.GridOn"
+                       Style="height:40px; text-transform:none; font-weight:600; border-radius:10px;">
+                Excel
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="@(_report == null || _isLoading)"
+                       OnClick="ExportPdfAsync" StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                       Style="height:40px; text-transform:none; font-weight:600; border-radius:10px;">
+                PDF
+            </MudButton>
         </Actions>
     </PageHeader>
 
@@ -28,7 +38,9 @@
     }
     else if (_report == null)
     {
-        <MudAlert Severity="Severity.Warning">Could not load report. Ensure the API is running.</MudAlert>
+        <MudAlert Severity="Severity.Warning">
+            Could not load report. @(_errorMessage ?? "Ensure the API is running.")
+        </MudAlert>
     }
     else
     {
@@ -110,13 +122,13 @@
                 <HeaderContent>
                     <MudTh>Type</MudTh>
                     <MudTh>Transactions</MudTh>
-                    <MudTh>Revenue (mmk)</MudTh>
+                    <MudTh>Revenue</MudTh>
                     <MudTh>Share</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd><span class="et-badge et-badge--indigo">@context.Type</span></MudTd>
                     <MudTd>@context.TransactionCount</MudTd>
-                    <MudTd Style="font-weight:700;">@context.Amount.ToString("N0")</MudTd>
+                    <MudTd Style="font-weight:700;">@context.Amount.ToString("N0") mmk</MudTd>
                     <MudTd>@context.Percentage.ToString("F1")%</MudTd>
                 </RowTemplate>
                 <NoRecordsContent>

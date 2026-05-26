@@ -10,7 +10,7 @@ using DotNet8.EasyTripBackendApi.DbService.Models;
 namespace DotNet8.EasyTripBackend.Features.TravelPackages
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/travelpackage")]
     public class TravelPackageController : ControllerBase
     {
         private readonly ITravelPackageService _travelPackageService;
@@ -40,7 +40,7 @@ namespace DotNet8.EasyTripBackend.Features.TravelPackages
             return Ok(result);
         }
 
-        [HttpGet("buses")]
+        [HttpGet("bus")]
         public async Task<ActionResult<System.Collections.Generic.List<BusSelectDto>>> GetBuses()
         {
             var buses = await _context.Buses
@@ -57,7 +57,7 @@ namespace DotNet8.EasyTripBackend.Features.TravelPackages
             return Ok(buses);
         }
 
-        [HttpGet("hotels")]
+        [HttpGet("hotel")]
         public async Task<ActionResult<System.Collections.Generic.List<HotelSelectDto>>> GetHotels()
         {
             var hotels = await _context.Hotels

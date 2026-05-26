@@ -20,6 +20,7 @@ namespace DotNet8.EasyTrip.App.Client
             // Register MudBlazor Services
             builder.Services.AddMudServices();
             builder.Services.AddScoped<TravelPackageApiService>();
+            builder.Services.AddScoped<ReportExportService>();
 
             await builder.Build().RunAsync();
         }

@@ -6,7 +6,7 @@ using DotNet8.EasyTripBackendApi.Models;
 namespace DotNet8.EasyTripBackend.Features.Hotels
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/hotel")]
     public class HotelController : ControllerBase
     {
         private readonly IHotelService _hotelService;

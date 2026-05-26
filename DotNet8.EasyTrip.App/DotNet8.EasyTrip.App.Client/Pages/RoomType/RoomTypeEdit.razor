@@ -65,7 +65,7 @@
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<RoomTypeResponseModel>($"api/roomtypes/{Id}");
+            var response = await Http.GetFromJsonAsync<RoomTypeResponseModel>($"api/roomtype/{Id}");
             if (response != null)
             {
                 _roomTypeModel = new RoomTypeRequestModel

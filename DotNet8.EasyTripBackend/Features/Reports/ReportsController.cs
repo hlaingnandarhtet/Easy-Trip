@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DotNet8.EasyTripBackend.Features.Reports
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/report")]
     public class ReportsController : ControllerBase
     {
         private readonly IReportService _reportService;
@@ -15,7 +15,7 @@ namespace DotNet8.EasyTripBackend.Features.Reports
             _reportService = reportService;
         }
 
-        [HttpGet("sales-revenue")]
+        [HttpGet("sale-revenue")]
         public async Task<IActionResult> GetSalesRevenue(
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate)
@@ -31,7 +31,7 @@ namespace DotNet8.EasyTripBackend.Features.Reports
             }
         }
 
-        [HttpGet("booking-analytics")]
+        [HttpGet("booking-analytic")]
         public async Task<IActionResult> GetBookingAnalytics(
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate)
@@ -47,7 +47,7 @@ namespace DotNet8.EasyTripBackend.Features.Reports
             }
         }
 
-        [HttpGet("top-services")]
+        [HttpGet("top-service")]
         public async Task<IActionResult> GetTopServices(
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,

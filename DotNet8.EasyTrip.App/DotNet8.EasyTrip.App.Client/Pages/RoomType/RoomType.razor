@@ -90,7 +90,7 @@
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtypes");
+            var response = await Http.GetFromJsonAsync<List<RoomTypeResponseModel>>("api/roomtype");
             _roomTypesList = response ?? new();
             PerformSearch();
         }
