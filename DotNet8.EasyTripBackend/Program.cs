@@ -127,6 +127,14 @@ namespace DotNet8.EasyTripBackend
                     Console.ResetColor();
                 }
             }
+            // Add a friendly home/health-check endpoint at the root URL (/) to prevent 404
+            app.MapGet("/", () => Results.Ok(new 
+            { 
+                Message = "Easy-Trip Web API is running successfully!", 
+                Environment = app.Environment.EnvironmentName,
+                Status = "Healthy",
+                Documentation = "/swagger"
+            }));
 
             app.Run();
         }
