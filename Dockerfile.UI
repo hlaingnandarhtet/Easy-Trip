@@ -1,0 +1,33 @@
+# Base ASP.NET 8.0 Runtime Image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+# .NET 8.0 SDK Image for building
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files first to leverage Docker layer caching for NuGet restore
+# Shared libraries (dependencies)
+COPY ["DotNet8.EasyTripBackendApi.Models/DotNet8.EasyTripBackendApi.Models.csproj", "DotNet8.EasyTripBackendApi.Models/"]
+COPY ["DotNet8.EasyTripBackendApi.Shared/DotNet8.EasyTripBackendApi.Shared.csproj", "DotNet8.EasyTripBackendApi.Shared/"]
+
+# Frontend projects
+COPY ["DotNet8.EasyTrip.App/DotNet8.EasyTrip.App.Client/DotNet8.EasyTrip.App.Client.csproj", "DotNet8.EasyTrip.App/DotNet8.EasyTrip.App.Client/"]
+COPY ["DotNet8.EasyTrip.App/DotNet8.EasyTrip.App/DotNet8.EasyTrip.App.csproj", "DotNet8.EasyTrip.App/DotNet8.EasyTrip.App/"]
+
+# Restore NuGet packages
+RUN dotnet restore "DotNet8.EasyTrip.App/DotNet8.EasyTrip.App/DotNet8.EasyTrip.App.csproj"
+
+# Copy the full source code
+COPY . .
+
+# Build and Publish the Blazor App
+WORKDIR "/src/DotNet8.EasyTrip.App/DotNet8.EasyTrip.App"
+RUN dotnet publish "DotNet8.EasyTrip.App.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Final Production Image
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "DotNet8.EasyTrip.App.dll"]
