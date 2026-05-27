@@ -1,0 +1,25 @@
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 80
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY ["DotNet8.EasyTripBackend.csproj", "./"]
+COPY ["../DotNet8.EasyTripBackendApi.DbService/DotNet8.EasyTripBackendApi.DbService.csproj", "../DotNet8.EasyTripBackendApi.DbService/"]
+COPY ["../DotNet8.EasyTripBackendApi.Models/DotNet8.EasyTripBackendApi.Models.csproj", "../DotNet8.EasyTripBackendApi.Models/"]
+COPY ["../DotNet8.EasyTripBackendApi.Shared/DotNet8.EasyTripBackendApi.Shared.csproj", "../DotNet8.EasyTripBackendApi.Shared/"]
+
+RUN dotnet restore "DotNet8.EasyTripBackend.csproj"
+COPY . .
+WORKDIR "/src"
+RUN dotnet build "DotNet8.EasyTripBackend.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "DotNet8.EasyTripBackend.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "DotNet8.EasyTripBackend.dll"]
