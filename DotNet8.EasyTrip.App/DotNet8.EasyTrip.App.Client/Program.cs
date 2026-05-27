@@ -14,8 +14,9 @@ namespace DotNet8.EasyTrip.App.Client
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-            // Register HttpClient pointing to the Backend Web API port
-            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7039/") });
+            // Register HttpClient pointing to the Backend Web API dynamically
+            var backendUrl = builder.Configuration["BackendApiUrl"] ?? "https://localhost:7039/";
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(backendUrl) });
 
             // Register MudBlazor Services
             builder.Services.AddMudServices();

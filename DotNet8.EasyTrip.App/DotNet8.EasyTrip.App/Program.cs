@@ -19,8 +19,9 @@ namespace DotNet8.EasyTrip.App
             builder.Services.AddScoped<DotNet8.EasyTrip.App.Client.Services.DrawerStateService>();
             builder.Services.AddScoped<DotNet8.EasyTrip.App.Client.Services.TravelPackageApiService>();
 
-            // Register HttpClient pointing to the Backend Web API port for Server Prerendering
-            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7039/") });
+            // Register HttpClient pointing to the Backend Web API dynamically
+            var backendUrl = builder.Configuration["BackendApiUrl"] ?? "https://localhost:7039/";
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(backendUrl) });
 
             var app = builder.Build();
 
