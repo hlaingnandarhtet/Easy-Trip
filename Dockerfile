@@ -27,5 +27,5 @@ RUN dotnet publish "DotNet8.EasyTripBackend.csproj" -c Release -o /app/publish /
 # Final Production Image
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "DotNet8.EasyTripBackend.dll"]
