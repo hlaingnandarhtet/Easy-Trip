@@ -244,7 +244,7 @@
             </div>
         </div>
         <div style="padding: 20px 0; color: #94a3b8; font-size: 0.9rem; text-align:center;">
-            🎁 Special discounts and exclusive offers for @_offerTab coming soon!
+             Special discounts and exclusive offers for @_offerTab coming soon!
         </div>
     </MudContainer>
 </div>
@@ -265,7 +265,7 @@
         @if (_activeTab == "Bus" && _allBuses != null && _allBuses.Any())
         {
             <div class="et-section">
-                <div class="et-section-title">🚌 Available Express Buses</div>
+                <div class="et-section-title">Available Express Buses</div>
                 <div class="et-section-sub">Search by departure date — select a date and move with the arrows.</div>
 
                 <!-- One-week date strip with left/right arrows -->
@@ -403,7 +403,7 @@
         @if (_activeTab == "Hotel" && hotels != null && hotels.Any())
         {
             <div class="et-section" style="padding-top: 0;">
-                <div class="et-section-title">🏨 Premium Hotels &amp; Rooms</div>
+                <div class="et-section-title">Premium Hotels &amp; Rooms</div>
                 <div class="et-section-sub">Handpicked hotels for a comfortable stay</div>
 
                 @if (!hotels.Any())
@@ -453,7 +453,7 @@
         @if (packages != null && packages.Any())
         {
             <div class="et-section" style="padding-top: 0;">
-                <div class="et-section-title">✈️ Exclusive Travel Packages</div>
+                <div class="et-section-title">Exclusive Travel Packages</div>
                 <div class="et-section-sub">All-inclusive deals for your dream vacation</div>
 
                 <MudGrid Spacing="3">
@@ -488,7 +488,7 @@
 <!-- ══════════════════════════════════════════════ -->
 <!-- WHY CHOOSE US                                 -->
 <!-- ══════════════════════════════════════════════ -->
-<div class="et-features">
+@* <div class="et-features">
     <MudContainer MaxWidth="MaxWidth.Large">
         <div style="text-align:center; margin-bottom: 40px;">
             <div class="et-section-title">Why Choose Easy-Trip?</div>
@@ -509,4 +509,4 @@
             }
         </MudGrid>
     </MudContainer>
-</div>
+</div> *@
